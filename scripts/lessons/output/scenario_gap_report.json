@@ -1,0 +1,595 @@
+[
+  {
+    "topic": "Introductions",
+    "expectedScenarios": [
+      "greeting",
+      "name exchange",
+      "origin",
+      "classroom introduction",
+      "workplace introduction",
+      "neighbor introduction",
+      "casual small talk",
+      "formal introduction",
+      "meeting at event",
+      "follow-up conversation"
+    ],
+    "coveredScenarios": [
+      "greeting",
+      "name exchange",
+      "origin",
+      "classroom introduction",
+      "workplace introduction",
+      "neighbor introduction",
+      "casual small talk",
+      "formal introduction"
+    ],
+    "missingScenarios": [
+      "meeting at event",
+      "follow-up conversation"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "greeting",
+        "count": 14,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "name exchange",
+        "count": 10,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "origin",
+        "count": 5,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "classroom introduction",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "workplace introduction",
+        "count": 4,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "neighbor introduction",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "casual small talk",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "formal introduction",
+        "count": 10,
+        "reason": "low-pattern-diversity"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "greeting",
+        "count": 14
+      },
+      {
+        "scenario": "name exchange",
+        "count": 10
+      },
+      {
+        "scenario": "formal introduction",
+        "count": 10
+      },
+      {
+        "scenario": "origin",
+        "count": 5
+      },
+      {
+        "scenario": "workplace introduction",
+        "count": 4
+      }
+    ]
+  },
+  {
+    "topic": "Ordering Food",
+    "expectedScenarios": [
+      "order drink",
+      "order food",
+      "ask price",
+      "ask bill",
+      "ask menu item",
+      "takeout",
+      "wrong order",
+      "dietary request",
+      "pay",
+      "clarify order"
+    ],
+    "coveredScenarios": [
+      "order drink",
+      "order food",
+      "ask price",
+      "ask bill",
+      "ask menu item",
+      "takeout",
+      "wrong order",
+      "dietary request",
+      "pay"
+    ],
+    "missingScenarios": [
+      "clarify order"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "order drink",
+        "count": 5,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "order food",
+        "count": 8,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "ask price",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "ask bill",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "ask menu item",
+        "count": 6,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "takeout",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "wrong order",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "dietary request",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "pay",
+        "count": 1,
+        "reason": "only-one-lesson"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "order food",
+        "count": 8
+      },
+      {
+        "scenario": "ask menu item",
+        "count": 6
+      },
+      {
+        "scenario": "order drink",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "topic": "Directions",
+    "expectedScenarios": [
+      "ask location",
+      "bathroom",
+      "station",
+      "hotel",
+      "left/right",
+      "near/far",
+      "landmark",
+      "confirm route",
+      "lost",
+      "transportation stop"
+    ],
+    "coveredScenarios": [
+      "ask location",
+      "bathroom",
+      "station",
+      "hotel",
+      "left/right",
+      "near/far",
+      "confirm route"
+    ],
+    "missingScenarios": [
+      "landmark",
+      "lost",
+      "transportation stop"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "ask location",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "bathroom",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "station",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "hotel",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "left/right",
+        "count": 5,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "near/far",
+        "count": 8,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "confirm route",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "near/far",
+        "count": 8
+      },
+      {
+        "scenario": "left/right",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "topic": "Shopping",
+    "expectedScenarios": [
+      "ask price",
+      "find item",
+      "size",
+      "color",
+      "pay",
+      "return item",
+      "exchange item",
+      "ask availability",
+      "compare options",
+      "ask for help"
+    ],
+    "coveredScenarios": [
+      "ask price",
+      "find item",
+      "size",
+      "color",
+      "pay",
+      "exchange item",
+      "ask availability",
+      "compare options"
+    ],
+    "missingScenarios": [
+      "return item",
+      "ask for help"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "ask price",
+        "count": 4,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "find item",
+        "count": 6,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "size",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "color",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "pay",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "exchange item",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "ask availability",
+        "count": 4,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "compare options",
+        "count": 1,
+        "reason": "only-one-lesson"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "find item",
+        "count": 6
+      },
+      {
+        "scenario": "ask price",
+        "count": 4
+      },
+      {
+        "scenario": "ask availability",
+        "count": 4
+      }
+    ]
+  },
+  {
+    "topic": "Hotel",
+    "expectedScenarios": [
+      "check-in",
+      "reservation",
+      "room problem",
+      "key/card",
+      "Wi-Fi",
+      "amenities",
+      "checkout",
+      "ask location",
+      "ask help",
+      "noise/problem"
+    ],
+    "coveredScenarios": [
+      "check-in",
+      "reservation",
+      "room problem",
+      "key/card",
+      "Wi-Fi",
+      "amenities",
+      "checkout",
+      "ask help",
+      "noise/problem"
+    ],
+    "missingScenarios": [
+      "ask location"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "check-in",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "reservation",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "room problem",
+        "count": 5,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "key/card",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "Wi-Fi",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "amenities",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "checkout",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "ask help",
+        "count": 6,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "noise/problem",
+        "count": 1,
+        "reason": "only-one-lesson"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "ask help",
+        "count": 6
+      },
+      {
+        "scenario": "room problem",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "topic": "Emergencies & Help",
+    "expectedScenarios": [
+      "feeling sick",
+      "ask help",
+      "lost phone",
+      "police",
+      "doctor",
+      "pharmacy",
+      "don’t understand",
+      "call someone",
+      "injury",
+      "urgent assistance"
+    ],
+    "coveredScenarios": [
+      "feeling sick",
+      "ask help",
+      "lost phone",
+      "police",
+      "doctor",
+      "don’t understand",
+      "call someone",
+      "urgent assistance"
+    ],
+    "missingScenarios": [
+      "pharmacy",
+      "injury"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "feeling sick",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "ask help",
+        "count": 7,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "lost phone",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "police",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "doctor",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "don’t understand",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "call someone",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "urgent assistance",
+        "count": 1,
+        "reason": "only-one-lesson"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "ask help",
+        "count": 7
+      }
+    ]
+  },
+  {
+    "topic": "Job & Hobbies",
+    "expectedScenarios": [
+      "work schedule",
+      "busy/tired",
+      "free time",
+      "hobby",
+      "weekend plans",
+      "job role",
+      "workplace problem",
+      "meeting",
+      "break/lunch",
+      "after work"
+    ],
+    "coveredScenarios": [
+      "work schedule",
+      "busy/tired",
+      "free time",
+      "hobby",
+      "weekend plans",
+      "job role",
+      "workplace problem",
+      "break/lunch",
+      "after work"
+    ],
+    "missingScenarios": [
+      "meeting"
+    ],
+    "weakScenarios": [
+      {
+        "scenario": "work schedule",
+        "count": 7,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "busy/tired",
+        "count": 4,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "free time",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "hobby",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "weekend plans",
+        "count": 3,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "job role",
+        "count": 2,
+        "reason": "low-pattern-diversity"
+      },
+      {
+        "scenario": "workplace problem",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "break/lunch",
+        "count": 1,
+        "reason": "only-one-lesson"
+      },
+      {
+        "scenario": "after work",
+        "count": 1,
+        "reason": "only-one-lesson"
+      }
+    ],
+    "overcoveredScenarios": [
+      {
+        "scenario": "work schedule",
+        "count": 7
+      },
+      {
+        "scenario": "busy/tired",
+        "count": 4
+      }
+    ]
+  }
+]

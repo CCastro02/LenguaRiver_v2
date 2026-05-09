@@ -1,0 +1,38 @@
+{
+  "fetchedAt": "2026-05-01T00:34:49.405Z",
+  "sourceUrl": "https://es.wikivoyage.org/",
+  "requestedPages": [
+    "España",
+    "México",
+    "Argentina",
+    "Colombia",
+    "Perú",
+    "Chile",
+    "Madrid",
+    "Ciudad de México",
+    "Buenos Aires",
+    "Bogotá",
+    "Lima",
+    "Santiago de Chile"
+  ],
+  "count": 1,
+  "items": [
+    {
+      "id": "es-wikivoyage-buenos-aires",
+      "language": "es",
+      "source": "wikivoyage",
+      "category": "travel",
+      "country": "Argentina",
+      "title": "Buenos Aires",
+      "summary": "No confundir con la Provincia de Buenos Aires.",
+      "text": "No confundir con la Provincia de Buenos Aires.",
+      "url": "https://es.wikivoyage.org/wiki/Buenos_Aires",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Cafe_Tortoni_tarima.jpg?utm_source=es.wikivoyage.org&utm_campaign=api&utm_content=original",
+      "tags": [
+        "travel",
+        "city",
+        "wikivoyage"
+      ]
+    }
+  ]
+}

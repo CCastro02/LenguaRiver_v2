@@ -1,0 +1,34 @@
+[
+  {
+    "scenario": "A learner asks for help finding a station in a busy neighborhood.",
+    "context": "Street directions / daily travel",
+    "phrases": [
+      "hola, ¿dónde está la estación",
+      "¿dónde está ___?",
+      "está cerca"
+    ]
+  },
+  {
+    "scenario": "A learner feels unwell and asks for help in a public place.",
+    "context": "Public place / emergency help",
+    "phrases": [
+      "hola, me siento mal",
+      "sí, necesito ayuda, por favor",
+      "está bien, aquí estoy",
+      "me siento ___",
+      "necesito ___",
+      "¿necesita ayuda"
+    ]
+  },
+  {
+    "scenario": "A learner asks for a simple order in a small cafe.",
+    "context": "Cafe / ordering",
+    "phrases": [
+      "¿tiene ___?",
+      "¿tiene efectivo",
+      "quiero ___",
+      "quiero café y pan",
+      "hola, ¿qué desea"
+    ]
+  }
+]

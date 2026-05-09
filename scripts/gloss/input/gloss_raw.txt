@@ -1,0 +1,23 @@
+Lesson 1
+Scenario: A learner asks for help finding a station in a busy neighborhood.
+Context: Street directions / daily travel
+A: Hola, ¿dónde está la estación?
+B: Está cerca. Sigue recto y luego a la derecha.
+A: Gracias.
+
+Lesson 2
+Scenario: A learner feels unwell and asks for help in a public place.
+Context: Public place / emergency help
+Speaker1: Hola, me siento mal.
+Speaker2: ¿Necesita ayuda?
+Speaker1: Sí, necesito ayuda, por favor.
+Speaker2: Está bien, aquí estoy.
+
+Lesson 3
+Scenario: A learner asks for a simple order in a small cafe.
+Context: Cafe / ordering
+A: Hola.
+B: Hola, ¿qué desea?
+A: Quiero café y pan.
+B: Claro. ¿Tiene efectivo?
+A: Sí. Gracias.

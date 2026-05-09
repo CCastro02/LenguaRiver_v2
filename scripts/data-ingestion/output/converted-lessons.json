@@ -1,0 +1,158 @@
+{
+  "converted": [
+    {
+      "lesson": {
+        "id": "draft-es-introductions-and-daily-basics",
+        "language": "es",
+        "title": "Introductions and Daily Basics",
+        "topic": "Introductions and Daily Basics",
+        "trackType": "core",
+        "required": true,
+        "objective": "Practice high-value self-introduction and daily-use chunks with contextual examples.",
+        "coreWords": ["me llamo", "hola", "soy de", "mucho gusto", "y tu"],
+        "interestWords": ["yo", "trabajar", "comer", "chile", "madrid"],
+        "sentences": [
+          {
+            "text": "Hola, me llamo Ana.",
+            "translation": "Hi, my name is Ana.",
+            "formality": "informal",
+            "audioPlaceholder": "[Audio coming soon]",
+            "words": [
+              {
+                "text": "hola",
+                "translation": "hello",
+                "baseForm": "hola",
+                "type": "core",
+                "formality": "informal",
+                "partOfSpeech": "noun",
+                "imageability": "high",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "me llamo",
+                "translation": "my name is",
+                "baseForm": "me llamar",
+                "type": "core",
+                "formality": "informal",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              }
+            ]
+          },
+          {
+            "text": "Mucho gusto, Ana. Yo soy Daniel y soy de Chile.",
+            "translation": "Nice to meet you, Ana. I am Daniel and I am from Chile.",
+            "formality": "neutral",
+            "audioPlaceholder": "[Audio coming soon]",
+            "words": [
+              {
+                "text": "mucho gusto",
+                "translation": "nice to meet you",
+                "baseForm": "mucho gusto",
+                "type": "core",
+                "formality": "neutral",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "soy de",
+                "translation": "I am from",
+                "baseForm": "ser de",
+                "type": "core",
+                "formality": "neutral",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "chile",
+                "translation": "Chile",
+                "baseForm": "chile",
+                "type": "interest",
+                "formality": "neutral",
+                "partOfSpeech": "noun",
+                "imageability": "high",
+                "repetitionPriority": "medium"
+              }
+            ]
+          }
+        ]
+      },
+      "warnings": ["No formal/informal contrast in selected sentences."]
+    },
+    {
+      "lesson": {
+        "id": "draft-ru-introductions-and-core-actions",
+        "language": "ru",
+        "title": "Introductions and Core Actions",
+        "topic": "Introductions and Core Actions",
+        "trackType": "core",
+        "required": true,
+        "objective": "Build beginner fluency with core introduction and action chunks using sentence-backed context.",
+        "coreWords": ["меня зовут", "как вас зовут", "как тебя зовут", "привет", "здравствуйте"],
+        "interestWords": ["я", "работаю", "москва", "россия", "говорить"],
+        "sentences": [
+          {
+            "text": "Привет, меня зовут Анна.",
+            "translation": "Hi, my name is Anna.",
+            "formality": "informal",
+            "audioPlaceholder": "[Audio coming soon]",
+            "words": [
+              {
+                "text": "привет",
+                "translation": "hi",
+                "baseForm": "привет",
+                "type": "core",
+                "formality": "informal",
+                "partOfSpeech": "noun",
+                "imageability": "high",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "меня зовут",
+                "translation": "my name is",
+                "baseForm": "меня зовут",
+                "type": "core",
+                "formality": "informal",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              }
+            ]
+          },
+          {
+            "text": "Здравствуйте, как вас зовут?",
+            "translation": "Hello, what is your name? (formal)",
+            "formality": "formal",
+            "audioPlaceholder": "[Audio coming soon]",
+            "words": [
+              {
+                "text": "здравствуйте",
+                "translation": "hello (formal)",
+                "baseForm": "здравствуйте",
+                "type": "core",
+                "formality": "formal",
+                "partOfSpeech": "noun",
+                "imageability": "high",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "как вас зовут",
+                "translation": "what is your name (formal)",
+                "baseForm": "как вас зовут",
+                "type": "core",
+                "formality": "formal",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              }
+            ]
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ]
+}

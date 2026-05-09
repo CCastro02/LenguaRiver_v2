@@ -1,0 +1,250 @@
+{
+  "lessons": [
+    {
+      "id": "es-directions-landmark-ask-01",
+      "language": "es",
+      "sourceType": "core",
+      "title": "Landmark Ask: Museum",
+      "topic": "Directions",
+      "objective": "Landmark scenario. Ask where a landmark is and confirm the route with short street conversation.",
+      "scenarioIntent": "asking about a landmark",
+      "dominantPattern": "¿dónde está ___?",
+      "coreWords": [
+        "¿dónde está ___?",
+        "siga recto",
+        "sí, es aquí"
+      ],
+      "sentences": [
+        {
+          "text": "Perdón, ¿dónde está el museo central?",
+          "words": [
+            { "text": "¿dónde está ___?", "exerciseAnchorText": "dónde está el museo central" }
+          ]
+        },
+        {
+          "text": "Siga recto dos cuadras.",
+          "words": [
+            { "text": "siga recto", "exerciseAnchorText": "siga recto" }
+          ]
+        },
+        {
+          "text": "¿Es por esta avenida?",
+          "words": [
+            { "text": "¿es por ___?", "exerciseAnchorText": "es por esta avenida" }
+          ]
+        },
+        {
+          "text": "Sí, es aquí.",
+          "words": [
+            { "text": "sí, es aquí", "exerciseAnchorText": "sí, es aquí" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-directions-landmark-reference-01",
+      "language": "es",
+      "sourceType": "core",
+      "title": "Landmark Reference Point",
+      "topic": "Directions",
+      "objective": "Landmark confirmation scenario. Use a nearby landmark as a reference point and confirm if it is close.",
+      "scenarioIntent": "confirming a landmark as a reference point",
+      "dominantPattern": "¿queda ___ cerca?",
+      "coreWords": [
+        "¿queda ___ cerca?",
+        "tome la esquina",
+        "no, está más lejos"
+      ],
+      "sentences": [
+        {
+          "text": "¿Queda la catedral cerca de la plaza?",
+          "words": [
+            { "text": "¿queda ___ cerca?", "exerciseAnchorText": "queda la catedral cerca" }
+          ]
+        },
+        {
+          "text": "Tome la esquina y siga derecho.",
+          "words": [
+            { "text": "tome la esquina", "exerciseAnchorText": "tome la esquina" }
+          ]
+        },
+        {
+          "text": "¿Entonces está cerca?",
+          "words": [
+            { "text": "¿entonces ___?", "exerciseAnchorText": "entonces está cerca" }
+          ]
+        },
+        {
+          "text": "No, está más lejos.",
+          "words": [
+            { "text": "no, está más lejos", "exerciseAnchorText": "no, está más lejos" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-directions-lost-state-01",
+      "language": "es",
+      "sourceType": "core",
+      "title": "Lost in the Neighborhood",
+      "topic": "Directions",
+      "objective": "Lost scenario. State that you are lost and ask for simple guidance to a known street.",
+      "scenarioIntent": "stating you are lost",
+      "dominantPattern": "estoy perdido / perdida",
+      "coreWords": [
+        "estoy perdido",
+        "me equivoqué",
+        "por esta calle"
+      ],
+      "sentences": [
+        {
+          "text": "Estoy perdido en este barrio.",
+          "words": [
+            { "text": "estoy perdido", "exerciseAnchorText": "estoy perdido" }
+          ]
+        },
+        {
+          "text": "¿Puede decirme la salida principal?",
+          "words": [
+            { "text": "¿puede decirme ___?", "exerciseAnchorText": "puede decirme la salida principal" }
+          ]
+        },
+        {
+          "text": "Me equivoqué de calle.",
+          "words": [
+            { "text": "me equivoqué", "exerciseAnchorText": "me equivoqué" }
+          ]
+        },
+        {
+          "text": "Vaya por esta calle.",
+          "words": [
+            { "text": "por esta calle", "exerciseAnchorText": "por esta calle" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-directions-lost-return-01",
+      "language": "es",
+      "sourceType": "core",
+      "title": "Getting Back to the Hotel",
+      "topic": "Directions",
+      "objective": "Lost recovery scenario. Ask someone to help you get back to your destination using short confirmation turns.",
+      "scenarioIntent": "asking someone to help you get back",
+      "dominantPattern": "necesito llegar a ___",
+      "coreWords": [
+        "necesito llegar a ___",
+        "¿me ayuda ___?",
+        "sí, es aquí"
+      ],
+      "sentences": [
+        {
+          "text": "Necesito llegar al hotel Sol.",
+          "words": [
+            { "text": "necesito llegar a ___", "exerciseAnchorText": "necesito llegar al hotel Sol" }
+          ]
+        },
+        {
+          "text": "¿Me ayuda a volver?",
+          "words": [
+            { "text": "¿me ayuda ___?", "exerciseAnchorText": "me ayuda a volver" }
+          ]
+        },
+        {
+          "text": "Gire en la próxima esquina.",
+          "words": [
+            { "text": "gire en ___", "exerciseAnchorText": "gire en la próxima esquina" }
+          ]
+        },
+        {
+          "text": "Sí, es aquí.",
+          "words": [
+            { "text": "sí, es aquí", "exerciseAnchorText": "sí, es aquí" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-directions-stop-route-01",
+      "language": "es",
+      "sourceType": "core",
+      "title": "Which Stop for This Route",
+      "topic": "Directions",
+      "objective": "Transportation stop scenario. Ask if a bus or metro line passes through a target stop.",
+      "scenarioIntent": "asking where a bus/train/metro stop is",
+      "dominantPattern": "¿pasa por ___?",
+      "coreWords": [
+        "¿pasa por ___?",
+        "la parada de ___",
+        "todavía no"
+      ],
+      "sentences": [
+        {
+          "text": "¿Pasa por la parada Central este bus?",
+          "words": [
+            { "text": "¿pasa por ___?", "exerciseAnchorText": "pasa por la parada Central" }
+          ]
+        },
+        {
+          "text": "No, esa línea no pasa por ahí.",
+          "words": [
+            { "text": "no pasa por ___", "exerciseAnchorText": "no pasa por ahí" }
+          ]
+        },
+        {
+          "text": "¿Y el metro azul pasa por allí?",
+          "words": [
+            { "text": "el metro ___", "exerciseAnchorText": "el metro azul" }
+          ]
+        },
+        {
+          "text": "Sí, pero todavía no.",
+          "words": [
+            { "text": "todavía no", "exerciseAnchorText": "todavía no" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-directions-stop-confirm-01",
+      "language": "es",
+      "sourceType": "core",
+      "title": "Confirm Correct Stop",
+      "topic": "Directions",
+      "objective": "Transportation confirmation scenario. Confirm whether you are at the correct stop and correct a misunderstanding.",
+      "scenarioIntent": "confirming you are at the correct stop",
+      "dominantPattern": "¿este es ___?",
+      "coreWords": [
+        "¿este es ___?",
+        "no, ese no es",
+        "la siguiente parada"
+      ],
+      "sentences": [
+        {
+          "text": "¿Este es el paradero Universidad?",
+          "words": [
+            { "text": "¿este es ___?", "exerciseAnchorText": "este es el paradero Universidad" }
+          ]
+        },
+        {
+          "text": "No, ese no es.",
+          "words": [
+            { "text": "no, ese no es", "exerciseAnchorText": "no, ese no es" }
+          ]
+        },
+        {
+          "text": "¿La siguiente parada es Universidad?",
+          "words": [
+            { "text": "la siguiente parada", "exerciseAnchorText": "la siguiente parada" }
+          ]
+        },
+        {
+          "text": "Sí, bájese en la próxima.",
+          "words": [
+            { "text": "bájese en ___", "exerciseAnchorText": "bájese en la próxima" }
+          ]
+        }
+      ]
+    }
+  ]
+}

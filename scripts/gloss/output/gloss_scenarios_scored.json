@@ -1,0 +1,55 @@
+[
+  {
+    "scenario": "A learner asks for a simple order in a small cafe.",
+    "context": "Cafe / ordering",
+    "phrases": [
+      "¿tiene ___?",
+      "¿tiene efectivo",
+      "quiero ___",
+      "quiero café y pan",
+      "hola, ¿qué desea"
+    ],
+    "score": 80.7,
+    "breakdown": {
+      "reuse": 72,
+      "simplicity": 100,
+      "patterns": 66.7,
+      "clarity": 100
+    }
+  },
+  {
+    "scenario": "A learner feels unwell and asks for help in a public place.",
+    "context": "Public place / emergency help",
+    "phrases": [
+      "hola, me siento mal",
+      "sí, necesito ayuda, por favor",
+      "está bien, aquí estoy",
+      "me siento ___",
+      "necesito ___",
+      "¿necesita ayuda"
+    ],
+    "score": 68.4,
+    "breakdown": {
+      "reuse": 61.3,
+      "simplicity": 100,
+      "patterns": 66.7,
+      "clarity": 50
+    }
+  },
+  {
+    "scenario": "A learner asks for help finding a station in a busy neighborhood.",
+    "context": "Street directions / daily travel",
+    "phrases": [
+      "hola, ¿dónde está la estación",
+      "¿dónde está ___?",
+      "está cerca"
+    ],
+    "score": 62.5,
+    "breakdown": {
+      "reuse": 57.3,
+      "simplicity": 100,
+      "patterns": 33.3,
+      "clarity": 66.7
+    }
+  }
+]

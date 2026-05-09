@@ -1,0 +1,154 @@
+{
+  "es": {
+    "normalizedSentences": [
+      {
+        "language": "es",
+        "text": "Hola, me llamo Ana.",
+        "normalizedText": "hola me llamo ana",
+        "translation": "Hi, my name is Ana.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "Trabajo en Madrid.",
+        "normalizedText": "trabajo en madrid",
+        "translation": "I work in Madrid.",
+        "source": "manual"
+      }
+    ],
+    "candidates": [
+      {
+        "language": "es",
+        "text": "hola",
+        "baseForm": "hola",
+        "tokenCount": 1,
+        "sourceSentence": "Hola, me llamo Ana.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "me",
+        "baseForm": "me",
+        "tokenCount": 1,
+        "sourceSentence": "Hola, me llamo Ana.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "llamo",
+        "baseForm": "llamar",
+        "tokenCount": 1,
+        "sourceSentence": "Hola, me llamo Ana.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "me llamo",
+        "baseForm": "me llamar",
+        "tokenCount": 2,
+        "sourceSentence": "Hola, me llamo Ana.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "ana",
+        "baseForm": "ana",
+        "tokenCount": 1,
+        "sourceSentence": "Hola, me llamo Ana.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "trabajo",
+        "baseForm": "trabajar",
+        "tokenCount": 1,
+        "sourceSentence": "Trabajo en Madrid.",
+        "source": "manual"
+      },
+      {
+        "language": "es",
+        "text": "madrid",
+        "baseForm": "madrid",
+        "tokenCount": 1,
+        "sourceSentence": "Trabajo en Madrid.",
+        "source": "manual"
+      }
+    ]
+  },
+  "ru": {
+    "normalizedSentences": [
+      {
+        "language": "ru",
+        "text": "Привет, меня зовут Анна.",
+        "normalizedText": "привет меня зовут анна",
+        "translation": "Hi, my name is Anna.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "Я работаю в Москве.",
+        "normalizedText": "я работаю в москве",
+        "translation": "I work in Moscow.",
+        "source": "manual"
+      }
+    ],
+    "candidates": [
+      {
+        "language": "ru",
+        "text": "привет",
+        "baseForm": "привет",
+        "tokenCount": 1,
+        "sourceSentence": "Привет, меня зовут Анна.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "меня",
+        "baseForm": "меня",
+        "tokenCount": 1,
+        "sourceSentence": "Привет, меня зовут Анна.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "зовут",
+        "baseForm": "зовут",
+        "tokenCount": 1,
+        "sourceSentence": "Привет, меня зовут Анна.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "меня зовут",
+        "baseForm": "меня зовут",
+        "tokenCount": 2,
+        "sourceSentence": "Привет, меня зовут Анна.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "анна",
+        "baseForm": "анна",
+        "tokenCount": 1,
+        "sourceSentence": "Привет, меня зовут Анна.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "работаю",
+        "baseForm": "работаю",
+        "tokenCount": 1,
+        "sourceSentence": "Я работаю в Москве.",
+        "source": "manual"
+      },
+      {
+        "language": "ru",
+        "text": "москве",
+        "baseForm": "москва",
+        "tokenCount": 1,
+        "sourceSentence": "Я работаю в Москве.",
+        "source": "manual"
+      }
+    ]
+  }
+}

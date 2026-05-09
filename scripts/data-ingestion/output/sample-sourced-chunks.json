@@ -1,0 +1,111 @@
+{
+  "es": [
+    {
+      "language": "es",
+      "text": "hablar",
+      "baseForm": "hablar",
+      "variants": ["hablar"],
+      "translation": "to speak",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "high",
+      "frequencyRank": 220,
+      "exampleSentences": [],
+      "sources": ["leipzig"]
+    },
+    {
+      "language": "es",
+      "text": "trabajo",
+      "baseForm": "trabajar",
+      "variants": ["trabajo", "trabajar"],
+      "translation": "to work",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "medium",
+      "frequencyRank": 1250,
+      "exampleSentences": ["Trabajo en Madrid."],
+      "sources": ["leipzig", "manual"]
+    },
+    {
+      "language": "es",
+      "text": "chile",
+      "baseForm": "chile",
+      "variants": ["chile"],
+      "translation": "Chile",
+      "partOfSpeech": "noun",
+      "category": "places",
+      "repetitionPriority": "medium",
+      "frequencyRank": 620,
+      "exampleSentences": ["Mi familia vive en Chile."],
+      "sources": ["leipzig", "manual"]
+    },
+    {
+      "language": "es",
+      "text": "me llamo",
+      "baseForm": "me llamar",
+      "variants": ["me llamo"],
+      "repetitionPriority": "medium",
+      "exampleSentences": ["Hola, me llamo Ana."],
+      "sources": ["manual"]
+    },
+    {
+      "language": "es",
+      "text": "hola",
+      "baseForm": "hola",
+      "variants": ["hola"],
+      "repetitionPriority": "low",
+      "exampleSentences": ["Hola, me llamo Ana."],
+      "sources": ["manual"]
+    }
+  ],
+  "ru": [
+    {
+      "language": "ru",
+      "text": "быть",
+      "baseForm": "быть",
+      "variants": ["быть"],
+      "translation": "to be",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "high",
+      "frequencyRank": 6,
+      "exampleSentences": [],
+      "sources": ["leipzig"]
+    },
+    {
+      "language": "ru",
+      "text": "москва",
+      "baseForm": "москва",
+      "variants": ["москва", "москве"],
+      "translation": "Moscow",
+      "partOfSpeech": "noun",
+      "category": "places",
+      "repetitionPriority": "high",
+      "frequencyRank": 10,
+      "exampleSentences": ["Я работаю в Москве."],
+      "sources": ["leipzig", "manual"]
+    },
+    {
+      "language": "ru",
+      "text": "говорить",
+      "baseForm": "говорить",
+      "variants": ["говорить"],
+      "translation": "to speak",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "medium",
+      "frequencyRank": 1250,
+      "exampleSentences": [],
+      "sources": ["leipzig"]
+    },
+    {
+      "language": "ru",
+      "text": "меня зовут",
+      "baseForm": "меня зовут",
+      "variants": ["меня зовут"],
+      "repetitionPriority": "medium",
+      "exampleSentences": ["Привет, меня зовут Анна."],
+      "sources": ["manual"]
+    }
+  ]
+}

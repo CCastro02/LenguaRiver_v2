@@ -1,0 +1,52 @@
+[
+  {
+    "language": "es",
+    "baseForm": "de",
+    "frequencyRank": 1,
+    "rawFrequency": 1903456,
+    "translation": "of / from",
+    "partOfSpeech": "preposition",
+    "source": "leipzig",
+    "sourceUrl": "https://wortschatz.uni-leipzig.de"
+  },
+  {
+    "language": "es",
+    "baseForm": "la",
+    "frequencyRank": 2,
+    "rawFrequency": 1743990,
+    "translation": "the (fem.)",
+    "partOfSpeech": "pronoun",
+    "source": "leipzig",
+    "sourceUrl": "https://wortschatz.uni-leipzig.de"
+  },
+  {
+    "language": "es",
+    "baseForm": "que",
+    "frequencyRank": 3,
+    "rawFrequency": 1710200,
+    "translation": "that / which",
+    "partOfSpeech": "other",
+    "source": "leipzig",
+    "sourceUrl": "https://wortschatz.uni-leipzig.de"
+  },
+  {
+    "language": "es",
+    "baseForm": "el",
+    "frequencyRank": 4,
+    "rawFrequency": 1652231,
+    "translation": "the (masc.)",
+    "partOfSpeech": "pronoun",
+    "source": "leipzig",
+    "sourceUrl": "https://wortschatz.uni-leipzig.de"
+  },
+  {
+    "language": "es",
+    "baseForm": "en",
+    "frequencyRank": 5,
+    "rawFrequency": 1429800,
+    "translation": "in",
+    "partOfSpeech": "preposition",
+    "source": "leipzig",
+    "sourceUrl": "https://wortschatz.uni-leipzig.de"
+  }
+]

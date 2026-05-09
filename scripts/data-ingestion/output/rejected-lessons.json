@@ -1,0 +1,76 @@
+{
+  "rejected": [
+    {
+      "lesson": {
+        "id": "draft-ru-introductions-and-core-actions",
+        "language": "ru",
+        "title": "Introductions and Core Actions",
+        "topic": "Introductions and Core Actions",
+        "trackType": "core",
+        "required": true,
+        "objective": "Build beginner fluency with core introduction and action chunks using sentence-backed context.",
+        "coreWords": ["меня зовут", "как вас зовут", "как тебя зовут", "привет", "здравствуйте"],
+        "interestWords": ["я", "работаю", "москва", "россия", "говорить"],
+        "sentences": [
+          {
+            "text": "Привет, меня зовут Анна.",
+            "translation": "Hi, my name is Anna.",
+            "formality": "informal",
+            "audioPlaceholder": "[Audio coming soon]",
+            "words": [
+              {
+                "text": "привет",
+                "translation": "hi",
+                "baseForm": "привет",
+                "type": "core",
+                "formality": "informal",
+                "partOfSpeech": "noun",
+                "imageability": "high",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "меня зовут",
+                "translation": "my name is",
+                "baseForm": "меня зовут",
+                "type": "core",
+                "formality": "informal",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              }
+            ]
+          },
+          {
+            "text": "Здравствуйте, как вас зовут?",
+            "translation": "Hello, what is your name? (formal)",
+            "formality": "formal",
+            "audioPlaceholder": "[Audio coming soon]",
+            "words": [
+              {
+                "text": "здравствуйте",
+                "translation": "hello (formal)",
+                "baseForm": "здравствуйте",
+                "type": "core",
+                "formality": "formal",
+                "partOfSpeech": "noun",
+                "imageability": "high",
+                "repetitionPriority": "high"
+              },
+              {
+                "text": "как вас зовут",
+                "translation": "what is your name (formal)",
+                "baseForm": "как вас зовут",
+                "type": "core",
+                "formality": "formal",
+                "partOfSpeech": "phrase",
+                "imageability": "medium",
+                "repetitionPriority": "high"
+              }
+            ]
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ]
+}

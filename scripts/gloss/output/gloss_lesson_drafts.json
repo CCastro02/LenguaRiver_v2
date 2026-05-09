@@ -1,0 +1,32 @@
+[
+  {
+    "id": "draft-gloss-ordering-food-01",
+    "language": "es",
+    "title": "Ordering Food Draft 1",
+    "topicSuggestion": "Ordering Food",
+    "context": "Cafe / ordering",
+    "scenario": "A learner asks for a simple order in a small cafe.",
+    "objective": "Ordering Food scenario from GLOSS: A learner asks for a simple order in a small cafe.",
+    "sentences": [
+      "Hola, ¿qué desea",
+      "Hola",
+      "Claro",
+      "Quiero café y pan",
+      "¿Tiene efectivo"
+    ],
+    "chunks": [
+      "tiene ___",
+      "quiero ___",
+      "hola"
+    ],
+    "dominantPattern": "quiero ___",
+    "scenarioIntent": "request/order",
+    "source": "gloss",
+    "sourceScore": 80.7,
+    "warnings": [
+      "batch has fewer than 2 less-used intents (complaint/clarification/comparison/refusal/correction)",
+      "missing correction sentence in selected draft",
+      "prioritize underrepresented intents over common patterns like quiero/donde esta"
+    ]
+  }
+]

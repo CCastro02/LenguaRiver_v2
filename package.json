@@ -1,12 +1,22 @@
 {
-  "name": "lenguariver-app",
+  "name": "lenguariver",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ingest:leipzig": "tsx scripts/data-ingestion/ingest-leipzig.ts",
+    "ingest:gloss": "tsx scripts/gloss/parse_gloss.ts",
+    "gloss:score": "tsx scripts/gloss/score_gloss.ts",
+    "gloss:draft": "tsx scripts/gloss/draft_lessons_from_gloss.ts",
+    "lessons:check-overlap": "tsx scripts/lessons/check_overlap.ts",
+    "lessons:validate-batch": "tsx scripts/lessons/validate_new_batch.ts",
+    "lessons:validate-continuation": "tsx scripts/lessons/validate_continuation.ts",
+    "lessons:detect-gaps": "tsx scripts/lessons/detect_scenario_gaps.ts",
+    "speech:setup": "pip install -r scripts/speech/requirements.txt",
+    "translate:setup": "pip install -r scripts/translate/requirements.txt"
   },
   "dependencies": {
     "next": "16.2.4",
@@ -14,6 +24,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "tsx": "^4.19.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

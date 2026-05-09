@@ -1,0 +1,120 @@
+[
+  {
+    "id": "gloss-001",
+    "scenario": "A learner asks for help finding a station in a busy neighborhood.",
+    "context": "Street directions / daily travel",
+    "turns": [
+      {
+        "speaker": "A",
+        "text": "Hola, ¿dónde está la estación?"
+      },
+      {
+        "speaker": "B",
+        "text": "Está cerca. Sigue recto y luego a la derecha."
+      },
+      {
+        "speaker": "A",
+        "text": "Gracias."
+      }
+    ],
+    "dialogueLines": [
+      "A: Hola, ¿dónde está la estación?",
+      "B: Está cerca. Sigue recto y luego a la derecha.",
+      "A: Gracias."
+    ],
+    "phrases": [
+      "hola, ¿dónde está la estación",
+      "¿dónde está ___?",
+      "está cerca"
+    ],
+    "patternMatches": [
+      "¿dónde está ___?"
+    ]
+  },
+  {
+    "id": "gloss-002",
+    "scenario": "A learner feels unwell and asks for help in a public place.",
+    "context": "Public place / emergency help",
+    "turns": [
+      {
+        "speaker": "Speaker1",
+        "text": "Hola, me siento mal."
+      },
+      {
+        "speaker": "Speaker2",
+        "text": "¿Necesita ayuda?"
+      },
+      {
+        "speaker": "Speaker1",
+        "text": "Sí, necesito ayuda, por favor."
+      },
+      {
+        "speaker": "Speaker2",
+        "text": "Está bien, aquí estoy."
+      }
+    ],
+    "dialogueLines": [
+      "Speaker1: Hola, me siento mal.",
+      "Speaker2: ¿Necesita ayuda?",
+      "Speaker1: Sí, necesito ayuda, por favor.",
+      "Speaker2: Está bien, aquí estoy."
+    ],
+    "phrases": [
+      "hola, me siento mal",
+      "sí, necesito ayuda, por favor",
+      "está bien, aquí estoy",
+      "me siento ___",
+      "necesito ___",
+      "¿necesita ayuda"
+    ],
+    "patternMatches": [
+      "me siento ___",
+      "necesito ___"
+    ]
+  },
+  {
+    "id": "gloss-003",
+    "scenario": "A learner asks for a simple order in a small cafe.",
+    "context": "Cafe / ordering",
+    "turns": [
+      {
+        "speaker": "A",
+        "text": "Hola."
+      },
+      {
+        "speaker": "B",
+        "text": "Hola, ¿qué desea?"
+      },
+      {
+        "speaker": "A",
+        "text": "Quiero café y pan."
+      },
+      {
+        "speaker": "B",
+        "text": "Claro. ¿Tiene efectivo?"
+      },
+      {
+        "speaker": "A",
+        "text": "Sí. Gracias."
+      }
+    ],
+    "dialogueLines": [
+      "A: Hola.",
+      "B: Hola, ¿qué desea?",
+      "A: Quiero café y pan.",
+      "B: Claro. ¿Tiene efectivo?",
+      "A: Sí. Gracias."
+    ],
+    "phrases": [
+      "¿tiene ___?",
+      "¿tiene efectivo",
+      "quiero ___",
+      "quiero café y pan",
+      "hola, ¿qué desea"
+    ],
+    "patternMatches": [
+      "quiero ___",
+      "¿tiene ___?"
+    ]
+  }
+]

@@ -1,0 +1,159 @@
+{
+  "drafts": [
+    {
+      "language": "es",
+      "topic": "Introductions and Daily Basics",
+      "objective": "Practice high-value self-introduction and daily-use chunks with contextual examples.",
+      "targetChunks": ["me llamo", "hola", "soy de", "mucho gusto", "y tu"],
+      "supportingChunks": ["yo", "trabajar", "comer", "chile", "madrid"],
+      "exampleSentences": [
+        "Hola, me llamo Ana.",
+        "¿Cómo se llama usted?",
+        "Mucho gusto, Ana. Yo soy Daniel y soy de Chile.",
+        "Hola, me llamo Ana. Mucho gusto."
+      ],
+      "sentences": [
+        {
+          "text": "Hola, me llamo Ana.",
+          "translation": "Hi, my name is Ana.",
+          "chunks": [
+            {
+              "text": "hola",
+              "baseForm": "hola",
+              "translation": "hello",
+              "formality": "informal"
+            },
+            {
+              "text": "me llamo",
+              "baseForm": "me llamar",
+              "translation": "my name is",
+              "formality": "informal"
+            }
+          ]
+        },
+        {
+          "text": "¿Cómo se llama usted?",
+          "translation": "What is your name? (formal)",
+          "chunks": [
+            {
+              "text": "se llama",
+              "baseForm": "se llamar",
+              "translation": "is called",
+              "formality": "formal"
+            },
+            {
+              "text": "usted",
+              "baseForm": "usted",
+              "translation": "you (formal)",
+              "formality": "formal"
+            }
+          ]
+        },
+        {
+          "text": "Mucho gusto, Ana. Yo soy Daniel y soy de Chile.",
+          "translation": "Nice to meet you, Ana. I am Daniel and I am from Chile.",
+          "chunks": [
+            {
+              "text": "mucho gusto",
+              "baseForm": "mucho gusto",
+              "translation": "nice to meet you",
+              "formality": "neutral"
+            },
+            {
+              "text": "soy de",
+              "baseForm": "ser de",
+              "translation": "I am from",
+              "formality": "neutral"
+            },
+            {
+              "text": "chile",
+              "baseForm": "chile",
+              "translation": "Chile",
+              "formality": "neutral"
+            }
+          ]
+        }
+      ],
+      "notes": [
+        "Review-only draft. Do not publish directly to app lessons.",
+        "Targets prioritize phrase-first selection, then fill with high-value single chunks as needed.",
+        "Targets selected from a single intent cluster for communicative coherence.",
+        "Places retained in supporting list to keep geographic context without dominating target practice."
+      ]
+    },
+    {
+      "language": "ru",
+      "topic": "Introductions and Core Actions",
+      "objective": "Build beginner fluency with core introduction and action chunks using sentence-backed context.",
+      "targetChunks": ["меня зовут", "как вас зовут", "как тебя зовут", "привет", "здравствуйте"],
+      "supportingChunks": ["я", "работаю", "москва", "россия", "говорить"],
+      "exampleSentences": [
+        "Привет, меня зовут Анна.",
+        "Здравствуйте, как вас зовут?",
+        "Привет, как тебя зовут?"
+      ],
+      "sentences": [
+        {
+          "text": "Привет, меня зовут Анна.",
+          "translation": "Hi, my name is Anna.",
+          "chunks": [
+            {
+              "text": "привет",
+              "baseForm": "привет",
+              "translation": "hi",
+              "formality": "informal"
+            },
+            {
+              "text": "меня зовут",
+              "baseForm": "меня зовут",
+              "translation": "my name is",
+              "formality": "informal"
+            }
+          ]
+        },
+        {
+          "text": "Здравствуйте, как вас зовут?",
+          "translation": "Hello, what is your name? (formal)",
+          "chunks": [
+            {
+              "text": "здравствуйте",
+              "baseForm": "здравствуйте",
+              "translation": "hello (formal)",
+              "formality": "formal"
+            },
+            {
+              "text": "как вас зовут",
+              "baseForm": "как вас зовут",
+              "translation": "what is your name (formal)",
+              "formality": "formal"
+            }
+          ]
+        },
+        {
+          "text": "Привет, как тебя зовут?",
+          "translation": "Hi, what's your name? (informal)",
+          "chunks": [
+            {
+              "text": "привет",
+              "baseForm": "привет",
+              "translation": "hi",
+              "formality": "informal"
+            },
+            {
+              "text": "как тебя зовут",
+              "baseForm": "как тебя зовут",
+              "translation": "what is your name (informal)",
+              "formality": "informal"
+            }
+          ]
+        }
+      ],
+      "notes": [
+        "Review-only draft. Do not publish directly to app lessons.",
+        "Targets prioritize phrase-first selection, then fill with high-value single chunks as needed.",
+        "Targets selected from a single intent cluster for communicative coherence.",
+        "Place chunks kept as supporting context, not primary targets."
+      ]
+    }
+  ]
+}

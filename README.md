@@ -18,6 +18,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Text-to-speech (TTS) voices
+
+Lessons use the browser **Web Speech API** (`speechSynthesis`). If Spanish text is read with the wrong accent, install a **Spanish system voice** and refresh the app.
+
+- **iPhone:** Settings → Accessibility → Spoken Content → Voices → **Spanish** → download a voice  
+- **Windows:** Settings → Time & Language → **Speech** → add a Spanish voice  
+- **macOS:** System Settings → Accessibility → **Spoken Content** → System Voice → **Manage Voices**
+
+In development, the browser console logs `[TTS]` lines when playback runs so you can confirm `voice.lang` starts with `es` for Spanish lessons.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

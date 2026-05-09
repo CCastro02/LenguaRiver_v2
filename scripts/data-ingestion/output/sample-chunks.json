@@ -1,0 +1,166 @@
+{
+  "es": [
+    {
+      "language": "es",
+      "text": "hablar",
+      "translation": "to speak",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "es",
+      "text": "casa",
+      "translation": "house",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "es",
+      "text": "comer",
+      "translation": "to eat",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "es",
+      "text": "chile",
+      "translation": "Chile",
+      "partOfSpeech": "noun",
+      "category": "places",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "es",
+      "text": "yo",
+      "translation": "I",
+      "partOfSpeech": "pronoun",
+      "category": "general",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "es",
+      "text": "trabajar",
+      "translation": "to work",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "es",
+      "text": "libro",
+      "translation": "book",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "low"
+    },
+    {
+      "language": "es",
+      "text": "ciudad",
+      "translation": "city",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "low"
+    },
+    {
+      "language": "es",
+      "text": "escuela",
+      "translation": "school",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "low"
+    },
+    {
+      "language": "es",
+      "text": "familia",
+      "translation": "family",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "low"
+    }
+  ],
+  "ru": [
+    {
+      "language": "ru",
+      "text": "я",
+      "translation": "I",
+      "partOfSpeech": "pronoun",
+      "category": "general",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "ru",
+      "text": "быть",
+      "translation": "to be",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "ru",
+      "text": "москва",
+      "translation": "Moscow",
+      "partOfSpeech": "noun",
+      "category": "places",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "ru",
+      "text": "дом",
+      "translation": "house",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "ru",
+      "text": "есть",
+      "translation": "to eat",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "high"
+    },
+    {
+      "language": "ru",
+      "text": "россия",
+      "translation": "Russia",
+      "partOfSpeech": "noun",
+      "category": "places",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "ru",
+      "text": "книга",
+      "translation": "book",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "ru",
+      "text": "говорить",
+      "translation": "to speak",
+      "partOfSpeech": "verb",
+      "category": "general",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "ru",
+      "text": "город",
+      "translation": "city",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "medium"
+    },
+    {
+      "language": "ru",
+      "text": "школа",
+      "translation": "school",
+      "partOfSpeech": "noun",
+      "category": "general",
+      "repetitionPriority": "low"
+    }
+  ]
+}

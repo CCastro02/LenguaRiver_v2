@@ -1,0 +1,36 @@
+{
+  "fetchedAt": "2026-05-01T00:56:00.988Z",
+  "source": "Project Gutenberg",
+  "booksFetched": 4,
+  "excerptsCreated": 4,
+  "books": [
+    {
+      "id": 2000,
+      "title": "Don Quijote",
+      "author": "Cervantes Saavedra, Miguel de",
+      "url": "https://www.gutenberg.org/ebooks/2000",
+      "excerptCount": 0
+    },
+    {
+      "id": 61851,
+      "title": "El crimen y el castigo",
+      "author": "Dostoyevsky, Fyodor",
+      "url": "https://www.gutenberg.org/ebooks/61851",
+      "excerptCount": 2
+    },
+    {
+      "id": 58221,
+      "title": "La Odisea",
+      "author": "Homer",
+      "url": "https://www.gutenberg.org/ebooks/58221",
+      "excerptCount": 0
+    },
+    {
+      "id": 55514,
+      "title": "Cuentos de amor",
+      "author": "Pardo Bazán, Emilia, condesa de",
+      "url": "https://www.gutenberg.org/ebooks/55514",
+      "excerptCount": 2
+    }
+  ]
+}

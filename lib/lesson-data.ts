@@ -1,0 +1,6025 @@
+import {
+  isLikelyPersonNameChunk,
+  normalizeCoreWordsList,
+  processLessonWordChunk,
+} from "./chunk-normalizer";
+import { GENERATED_LESSONS } from "./generated-lessons";
+import { buildContinuationFieldsForLesson } from "./lesson-tense-mode-continuation-fields";
+import type { TenseMode } from "./lesson-tense-mode";
+export type { TenseMode } from "./lesson-tense-mode";
+export { DEFAULT_TENSE_MODE, isContinuationTenseMode, isTenseMode, normalizeTenseMode } from "./lesson-tense-mode";
+
+export type LessonWordType = "core" | "interest" | "person-name";
+export type LessonLanguage = "es" | "ru";
+export type LessonSourceType = "core" | "generated";
+export type InterestTopic = "engineering" | "fitness" | "business" | "travel";
+export type LessonFormality = "formal" | "informal" | "neutral";
+export type LessonGender = "masculine" | "feminine" | "neuter" | "none";
+export type LessonTrackType = "core" | "language-specific" | "interest";
+export type LessonTier = "easy" | "medium" | "real";
+export type LessonSpecializationType =
+  | "formal-informal"
+  | "script"
+  | "politeness"
+  | "grammar-pattern"
+  | "culture"
+  | "dialect";
+export type LessonPartOfSpeech =
+  | "noun"
+  | "verb"
+  | "adjective"
+  | "phrase"
+  | "preposition"
+  | "pronoun"
+  | "other";
+export type LessonImageability = "high" | "medium" | "low";
+export type LessonRepetitionPriority = "high" | "medium" | "low";
+
+export type LessonDifficultyProfile = {
+  unknownWordTarget: number;
+  speechSpeed: "slow" | "normal" | "real";
+  ambiguity: "low" | "medium" | "high";
+};
+
+export type LessonWord = {
+  text: string;
+  /** When `text` is a pattern (e.g. with `___`), substring in the sentence used for fill-in / typing checks. */
+  exerciseAnchorText?: string;
+  phonetic?: string;
+  translation: string;
+  acceptedMeanings?: string[];
+  type: LessonWordType;
+  formality: LessonFormality;
+  gender?: LessonGender;
+  genderNote?: string;
+  contextLabel?: string;
+  contextNote?: string;
+  interestTopic?: InterestTopic;
+  partOfSpeech: LessonPartOfSpeech;
+  imageability: LessonImageability;
+  repetitionPriority: LessonRepetitionPriority;
+  image?: string;
+};
+
+type RawLessonWord = {
+  text: string;
+  exerciseAnchorText?: string;
+  phonetic?: string;
+  translation: string;
+  acceptedMeanings?: string[];
+  type: LessonWordType;
+  formality?: LessonFormality;
+  gender?: LessonGender;
+  genderNote?: string;
+  contextLabel?: string;
+  contextNote?: string;
+  interestTopic?: InterestTopic;
+  partOfSpeech?: LessonPartOfSpeech;
+  imageability?: LessonImageability;
+  repetitionPriority?: LessonRepetitionPriority;
+  image?: string;
+};
+
+export type LessonSentence = {
+  text: string;
+  phonetic?: string;
+  translation: string;
+  formality: LessonFormality;
+  contextLabel?: string;
+  contextNote?: string;
+  audioPlaceholder: string;
+  words: LessonWord[];
+};
+
+type RawLessonSentence = {
+  text: string;
+  phonetic?: string;
+  translation: string;
+  formality?: LessonFormality;
+  contextLabel?: string;
+  contextNote?: string;
+  audioPlaceholder: string;
+  words: RawLessonWord[];
+};
+
+export type Lesson = {
+  id: string;
+  language: LessonLanguage;
+  sourceType: LessonSourceType;
+  title: string;
+  topic: string;
+  contextGroup?: string;
+  context?: string;
+  skill?: string;
+  scenarioFamily?: string;
+  scenarioTitle?: string;
+  tier?: LessonTier;
+  /** Scenario continuation tense track; omitted in data defaults to "present" after normalization. */
+  tenseMode: TenseMode;
+  /** Prerequisite lesson id (typically the present-tense scenario lesson). */
+  continuationOf?: string;
+  /** Authoring-only communicative goal; not shown in Phase A UI. */
+  discourseGoal?: string;
+  /** Discourse connectors (e.g. ayer, después) for continuation authoring. */
+  connectors: string[];
+  /** Target verb forms or lemmas for continuation authoring. */
+  targetVerbs: string[];
+  /** Authored structure ids or labels for later evaluators. */
+  expectedStructures: string[];
+  /** Required chunk surfaces for Medium/Real continuation validation (later phases). */
+  requiredChunks: string[];
+  themeTags?: string[];
+  difficultyProfile?: LessonDifficultyProfile;
+  trackType: LessonTrackType;
+  required: boolean;
+  specializationType?: LessonSpecializationType;
+  interestTopic?: InterestTopic;
+  objective: string;
+  coreWords: string[];
+  interestWords: string[];
+  sentences: LessonSentence[];
+};
+type RawLesson = {
+  id: string;
+  language: LessonLanguage;
+  sourceType?: LessonSourceType;
+  title: string;
+  topic: string;
+  contextGroup?: string;
+  context?: string;
+  skill?: string;
+  scenarioFamily?: string;
+  scenarioTitle?: string;
+  tier?: LessonTier;
+  tenseMode?: string;
+  continuationOf?: string;
+  discourseGoal?: string;
+  connectors?: string[];
+  targetVerbs?: string[];
+  expectedStructures?: string[];
+  requiredChunks?: string[];
+  themeTags?: string[];
+  difficultyProfile?: LessonDifficultyProfile;
+  trackType?: LessonTrackType;
+  required?: boolean;
+  specializationType?: LessonSpecializationType;
+  interestTopic?: InterestTopic;
+  objective: string;
+  coreWords: string[];
+  interestWords: string[];
+  sentences: RawLessonSentence[];
+};
+
+const STATIC_RAW_LESSONS: RawLesson[] = [
+  {
+    id: "lesson-1",
+    language: "es",
+    title: "Restaurant Ordering Basics",
+    topic: "Ordering Food",
+    objective:
+      "Order a meal naturally in a restaurant by asking for a table, reading options, and paying.",
+    coreWords: [
+      "quiero",
+      "la cuenta",
+      "por favor",
+      "para mi",
+      "me trae",
+      "el menu",
+    ],
+    interestWords: ["sin cebolla", "picante"],
+    sentences: [
+      {
+        text: "Buenas tardes, quiero una mesa para dos, por favor.",
+        translation: "Good afternoon, I want a table for two, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "buenas tardes", translation: "good afternoon", type: "core" },
+          { text: "quiero", translation: "I want", type: "core", image: "/images/chunks/quiero.png" },
+          { text: "una mesa", translation: "a table", type: "core", image: "/images/chunks/mesa.png" },
+          { text: "para dos", translation: "for two", type: "core" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Me trae el menu, por favor?",
+        translation: "Can you bring me the menu, please?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me trae", translation: "bring me", type: "core" },
+          { text: "el menu", translation: "the menu", type: "core", image: "/images/chunks/menu.png" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Para mi, quiero la sopa y el pollo, sin cebolla.",
+        translation: "For me, I want the soup and the chicken, without onion.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "para mi", translation: "for me", type: "core" },
+          { text: "quiero", translation: "I want", type: "core" },
+          {
+            text: "la sopa",
+            translation: "the soup",
+            type: "core",
+            gender: "feminine",
+            genderNote: "la sopa = feminine noun phrase",
+          },
+          {
+            text: "el pollo",
+            translation: "the chicken",
+            type: "core",
+            gender: "masculine",
+            genderNote: "el pollo = masculine noun phrase",
+          },
+          {
+            text: "sin cebolla",
+            translation: "without onion",
+            type: "interest",
+            image: "/images/chunks/sin-cebolla.png",
+          },
+        ],
+      },
+      {
+        text: "Y para mi, quiero arroz y agua, por favor.",
+        translation: "And for me, I want rice and water, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "para mi", translation: "for me", type: "core" },
+          { text: "quiero", translation: "I want", type: "core" },
+          { text: "arroz", translation: "rice", type: "core" },
+          { text: "agua", translation: "water", type: "core" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "La salsa es picante?",
+        translation: "Is the sauce spicy?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "la salsa", translation: "the sauce", type: "core" },
+          { text: "es", translation: "is", type: "core" },
+          { text: "picante", translation: "spicy", type: "interest", image: "/images/chunks/picante.png" },
+        ],
+      },
+      {
+        text: "Me trae la cuenta, por favor.",
+        translation: "Please bring me the bill.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me trae", translation: "bring me", type: "core" },
+          { text: "la cuenta", translation: "the bill", type: "core", image: "/images/chunks/cuenta.png" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-2",
+    language: "es",
+    title: "Hotel Front Desk Basics",
+    topic: "Hotel Check-in",
+    objective:
+      "Complete hotel check-in by confirming reservation details, asking practical questions, and receiving room information.",
+    coreWords: [
+      "tengo una reserva",
+      "a nombre de",
+      "mi pasaporte",
+      "por favor",
+      "a que hora",
+      "la habitacion",
+    ],
+    interestWords: ["con vista", "desayuno incluido"],
+    sentences: [
+      {
+        text: "Buenas noches, tengo una reserva a nombre de Rivera.",
+        translation: "Good evening, I have a reservation under Rivera.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "buenas noches", translation: "good evening", type: "core" },
+          { text: "tengo una reserva", translation: "I have a reservation", type: "core" },
+          { text: "a nombre de", translation: "under the name of", type: "core" },
+          { text: "Rivera", translation: "Rivera", type: "core" },
+        ],
+      },
+      {
+        text: "Claro, me muestra mi pasaporte, por favor?",
+        translation: "Of course, can you show me your passport, please?",
+        formality: "formal",
+        contextLabel: "staff / customer",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "claro", translation: "of course", type: "core" },
+          { text: "me muestra", translation: "can you show me", type: "core" },
+          { text: "mi pasaporte", translation: "my passport", type: "core" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Si, aqui esta mi pasaporte. La habitacion es con vista?",
+        translation: "Yes, here is my passport. Is the room with a view?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "aqui esta", translation: "here is", type: "core" },
+          { text: "mi pasaporte", translation: "my passport", type: "core" },
+          { text: "la habitacion", translation: "the room", type: "core" },
+          { text: "con vista", translation: "with a view", type: "interest", interestTopic: "travel" },
+        ],
+      },
+      {
+        text: "Si, su habitacion es con vista y desayuno incluido.",
+        translation: "Yes, your room has a view and breakfast included.",
+        formality: "formal",
+        contextLabel: "staff / customer",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "su habitacion",
+            translation: "your room",
+            type: "core",
+            formality: "formal",
+            contextLabel: "staff / customer",
+          },
+          { text: "con vista", translation: "with a view", type: "interest", interestTopic: "travel" },
+          {
+            text: "desayuno incluido",
+            translation: "breakfast included",
+            type: "interest",
+            interestTopic: "travel",
+          },
+        ],
+      },
+      {
+        text: "Perfecto, a que hora es el desayuno, por favor?",
+        translation: "Perfect, what time is breakfast, please?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "perfecto", translation: "perfect", type: "core" },
+          { text: "a que hora", translation: "at what time", type: "core" },
+          { text: "el desayuno", translation: "breakfast", type: "core" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Es de siete a diez. Aqui tiene la llave de la habitacion.",
+        translation: "It is from seven to ten. Here is your room key.",
+        formality: "formal",
+        contextLabel: "staff / customer",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "de siete a diez", translation: "from seven to ten", type: "core" },
+          { text: "aqui tiene", translation: "here you have", type: "core" },
+          { text: "la llave", translation: "the key", type: "core" },
+          { text: "la habitacion", translation: "the room", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-3",
+    language: "es",
+    sourceType: "core",
+    title: "Personal Introductions",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "School",
+    scenarioFamily: "intro-school-introductions",
+    scenarioTitle: "Introducing yourself to class",
+    trackType: "core",
+    required: true,
+    objective:
+      "Introduce yourself, ask basic personal questions, and continue a short social conversation naturally.",
+    coreWords: ["me llamo", "soy de", "trabajo en", "mucho gusto", "y tu", "vivo en"],
+    interestWords: ["ingeniera", "fotografia"],
+    sentences: [
+      {
+        text: "Hola, me llamo Ana. Mucho gusto.",
+        translation: "Hi, my name is Ana. Nice to meet you.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "hola",
+            translation: "hi",
+            acceptedMeanings: ["hello", "hi"],
+            type: "core",
+          },
+          { text: "me llamo", translation: "my name is", type: "core" },
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Mucho gusto, Ana. Yo soy Daniel y soy de Chile.",
+        translation: "Nice to meet you, Ana. I am Daniel and I am from Chile.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+          },
+          { text: "yo soy", translation: "I am", type: "core" },
+          { text: "soy de", translation: "I am from", type: "core" },
+          { text: "Chile", translation: "Chile", type: "core" },
+        ],
+      },
+      {
+        text: "Yo vivo en Madrid y trabajo en una escuela.",
+        translation: "I live in Madrid and I work at a school.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "vivo en", translation: "I live in", type: "core" },
+          { text: "trabajo en", translation: "I work at", type: "core" },
+          { text: "una escuela", translation: "a school", type: "core" },
+        ],
+      },
+      {
+        text: "Que bien. Yo trabajo en una oficina y soy ingeniera.",
+        translation: "Great. I work in an office and I am an engineer.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "que bien", translation: "great", type: "core" },
+          { text: "trabajo en", translation: "I work at", type: "core" },
+          { text: "una oficina", translation: "an office", type: "core" },
+          { text: "ingeniera", translation: "engineer", type: "interest", interestTopic: "engineering" },
+        ],
+      },
+      {
+        text: "Y tu, que haces en tu tiempo libre?",
+        translation: "And you, what do you do in your free time?",
+        formality: "informal",
+        contextLabel: "friend / family",
+        contextNote: "Use tú with friends and people your age in casual situations.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "y tu",
+            translation: "and you",
+            type: "core",
+            formality: "informal",
+            contextLabel: "friend / family",
+          },
+          { text: "que haces", translation: "what do you do", type: "core" },
+          { text: "tiempo libre", translation: "free time", type: "core" },
+        ],
+      },
+      {
+        text: "Y usted, en que trabaja?",
+        translation: "And you, what do you do for work? (formal)",
+        formality: "formal",
+        contextLabel: "professional",
+        contextNote: "Use usted in professional or respectful contexts.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "y usted",
+            translation: "and you (formal)",
+            type: "core",
+            formality: "formal",
+            contextLabel: "professional",
+          },
+          { text: "en que trabaja", translation: "what do you do for work", type: "core" },
+        ],
+      },
+      {
+        text: "Me gusta la fotografia y correr por el parque.",
+        translation: "I like photography and running in the park.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me gusta", translation: "I like", type: "core" },
+          { text: "fotografia", translation: "photography", type: "interest", interestTopic: "travel" },
+          { text: "correr", translation: "to run", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-4",
+    language: "es",
+    title: "City Navigation",
+    topic: "Asking for Directions",
+    objective:
+      "Ask for and understand basic city directions to reach a destination using common navigation phrases.",
+    coreWords: ["donde esta", "como llego", "siga recto", "gire a la derecha", "a la izquierda", "gracias"],
+    interestWords: ["el semaforo", "la esquina"],
+    sentences: [
+      {
+        text: "Perdon, donde esta la estacion de tren?",
+        translation: "Excuse me, where is the train station?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "perdon", translation: "excuse me", type: "core" },
+          { text: "donde esta", translation: "where is", type: "core" },
+          { text: "la estacion de tren", translation: "the train station", type: "core" },
+        ],
+      },
+      {
+        text: "Esta cerca. Como llego desde aqui?",
+        translation: "It is close. How do I get there from here?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "esta cerca", translation: "it is close", type: "core" },
+          { text: "como llego", translation: "how do I get", type: "core" },
+          { text: "desde aqui", translation: "from here", type: "core" },
+        ],
+      },
+      {
+        text: "Siga recto hasta el semaforo.",
+        translation: "Go straight until the traffic light.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "siga recto", translation: "go straight", type: "core" },
+          { text: "hasta", translation: "until", type: "core" },
+          { text: "el semaforo", translation: "the traffic light", type: "interest", interestTopic: "travel" },
+        ],
+      },
+      {
+        text: "Luego gire a la derecha en la esquina.",
+        translation: "Then turn right at the corner.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "luego", translation: "then", type: "core" },
+          { text: "gire a la derecha", translation: "turn right", type: "core" },
+          { text: "la esquina", translation: "the corner", type: "interest", interestTopic: "travel" },
+        ],
+      },
+      {
+        text: "Despues, camine dos cuadras y gire a la izquierda.",
+        translation: "After that, walk two blocks and turn left.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "despues", translation: "after that", type: "core" },
+          { text: "camine dos cuadras", translation: "walk two blocks", type: "core" },
+          { text: "a la izquierda", translation: "to the left", type: "core" },
+        ],
+      },
+      {
+        text: "Perfecto, muchas gracias por su ayuda.",
+        translation: "Perfect, thank you very much for your help.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "perfecto", translation: "perfect", type: "core" },
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+          { text: "por su ayuda", translation: "for your help", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-ask-basic",
+    language: "es",
+    title: "Directions — Asking (basic)",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Asking (basic). Scenario: You ask where something is. Learn greetings, the where-is pattern, para mí, and thanks.",
+    coreWords: ["hola", "¿dónde está ___?", "para mí", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        contextLabel: "Asking (basic)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core" }],
+      },
+      {
+        text: "¿Dónde está ___?",
+        translation: "Where is ___?",
+        contextLabel: "Asking (basic)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", translation: "where is ___?", type: "core" }],
+      },
+      {
+        text: "Para mí.",
+        translation: "For me.",
+        contextLabel: "Asking (basic)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "para mí", translation: "for me", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Asking (basic)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-ask-example",
+    language: "es",
+    title: "Directions — Asking (examples)",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Asking (examples). Scenario: You ask about specific places. Practice the where-is question with concrete nouns.",
+    coreWords: ["¿dónde está ___?", "para mí", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "¿Dónde está el baño?",
+        translation: "Where is the bathroom?",
+        contextLabel: "Asking (examples)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está el baño?", translation: "where is the bathroom?", type: "core" }],
+      },
+      {
+        text: "¿Dónde está la calle?",
+        translation: "Where is the street?",
+        contextLabel: "Asking (examples)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está la calle?", translation: "where is the street?", type: "core" }],
+      },
+      {
+        text: "Para mí.",
+        translation: "For me.",
+        contextLabel: "Asking (examples)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "para mí", translation: "for me", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Asking (examples)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-left-right",
+    language: "es",
+    title: "Directions — Left / right",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Directions (left/right). Scenario: You are told to go left or right. Recognize a la izquierda and a la derecha.",
+    coreWords: ["a la izquierda", "a la derecha", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "A la izquierda.",
+        translation: "To the left.",
+        contextLabel: "Directions (left/right)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "a la izquierda", translation: "to the left", type: "core" }],
+      },
+      {
+        text: "A la derecha.",
+        translation: "To the right.",
+        contextLabel: "Directions (left/right)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "a la derecha", translation: "to the right", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Directions (left/right)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-move",
+    language: "es",
+    title: "Directions — Movement",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Directions (movement). Scenario: You are told to go straight or stay. Learn sigue recto and está aquí.",
+    coreWords: ["sigue recto", "está aquí", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Sigue recto.",
+        translation: "Go straight.",
+        contextLabel: "Directions (movement)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "sigue recto", translation: "go straight", type: "core" }],
+      },
+      {
+        text: "Está aquí.",
+        translation: "It is here.",
+        contextLabel: "Directions (movement)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está aquí", translation: "it is here", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Directions (movement)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-combined",
+    language: "es",
+    title: "Directions — Combined",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Directions (combined). Scenario: You receive multiple instructions. Combine está with a la izquierda and sigue recto.",
+    coreWords: ["está", "a la izquierda", "sigue recto", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Está a la izquierda.",
+        translation: "It is to the left.",
+        contextLabel: "Directions (combined)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "está", translation: "it is", type: "core" },
+          { text: "a la izquierda", translation: "to the left", type: "core" },
+        ],
+      },
+      {
+        text: "Sigue recto.",
+        translation: "Go straight.",
+        contextLabel: "Directions (combined)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "sigue recto", translation: "go straight", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Directions (combined)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-confirm",
+    language: "es",
+    title: "Directions — Confirmation",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Directions (confirmation). Scenario: You confirm directions. Practice ¿aquí? and sí, aquí.",
+    coreWords: ["¿aquí?", "sí", "aquí", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "¿Aquí?",
+        translation: "Here?",
+        contextLabel: "Directions (confirmation)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿aquí?", translation: "here?", type: "core" }],
+      },
+      {
+        text: "Sí, aquí.",
+        translation: "Yes, here.",
+        contextLabel: "Directions (confirmation)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "sí", translation: "yes", type: "core" },
+          { text: "aquí", translation: "here", type: "core" },
+        ],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Directions (confirmation)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-distance",
+    language: "es",
+    title: "Directions — Distance",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Directions (distance). Scenario: You are told if something is near or far. Learn está cerca and está lejos.",
+    coreWords: ["está cerca", "está lejos", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Está cerca.",
+        translation: "It is near.",
+        contextLabel: "Directions (distance)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está cerca", translation: "it is near", type: "core" }],
+      },
+      {
+        text: "Está lejos.",
+        translation: "It is far.",
+        contextLabel: "Directions (distance)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está lejos", translation: "it is far", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Directions (distance)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-directions-reinforce",
+    language: "es",
+    title: "Directions — Reinforcement",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Directions (reinforcement). Scenario: You clarify that something is not nearby. Practice no está aquí and está lejos.",
+    coreWords: ["no", "está aquí", "está lejos", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "No está aquí.",
+        translation: "It is not here.",
+        contextLabel: "Directions (reinforcement)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "no", translation: "no", type: "core" },
+          { text: "está aquí", translation: "it is here", type: "core" },
+        ],
+      },
+      {
+        text: "Está lejos.",
+        translation: "It is far.",
+        contextLabel: "Directions (reinforcement)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está lejos", translation: "it is far", type: "core" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        contextLabel: "Directions (reinforcement)",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "gracias",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-5",
+    language: "es",
+    title: "Work and Free Time",
+    topic: "Job & Hobbies",
+    objective:
+      "Describe your job, ask others about their work, and discuss hobbies in a practical conversation.",
+    coreWords: ["en que trabajas", "trabajo como", "me gusta", "en mi tiempo libre", "los fines de semana", "y tu"],
+    interestWords: ["programacion", "senderismo"],
+    sentences: [
+      {
+        text: "Hola, en que trabajas actualmente?",
+        translation: "Hi, what do you do for work currently?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "hola",
+            translation: "hi",
+            acceptedMeanings: ["hello", "hi"],
+            type: "core",
+          },
+          { text: "en que trabajas", translation: "what do you do for work", type: "core" },
+          { text: "actualmente", translation: "currently", type: "core" },
+        ],
+      },
+      {
+        text: "Trabajo como diseniador, y tu?",
+        translation: "I work as a designer, and you?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "trabajo como", translation: "I work as", type: "core" },
+          { text: "diseniador", translation: "designer", type: "core" },
+          { text: "y tu", translation: "and you", type: "core" },
+        ],
+      },
+      {
+        text: "Yo trabajo como profesor y me gusta la programacion.",
+        translation: "I work as a teacher and I like programming.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "yo trabajo como", translation: "I work as", type: "core" },
+          { text: "profesor", translation: "teacher", type: "core" },
+          { text: "me gusta", translation: "I like", type: "core" },
+          {
+            text: "programacion",
+            translation: "programming",
+            type: "interest",
+            interestTopic: "engineering",
+          },
+        ],
+      },
+      {
+        text: "Que haces en mi tiempo libre?",
+        translation: "What do you do in your free time?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "que haces", translation: "what do you do", type: "core" },
+          { text: "en mi tiempo libre", translation: "in my free time", type: "core" },
+        ],
+      },
+      {
+        text: "En mi tiempo libre me gusta leer y hacer senderismo.",
+        translation: "In my free time I like reading and hiking.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "en mi tiempo libre", translation: "in my free time", type: "core" },
+          { text: "me gusta", translation: "I like", type: "core" },
+          { text: "senderismo", translation: "hiking", type: "interest", interestTopic: "fitness" },
+        ],
+      },
+      {
+        text: "Los fines de semana juego futbol con mis amigos.",
+        translation: "On weekends I play soccer with my friends.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "los fines de semana", translation: "on weekends", type: "core" },
+          { text: "juego futbol", translation: "I play soccer", type: "core" },
+          { text: "con mis amigos", translation: "with my friends", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-6",
+    language: "ru",
+    title: "Cafe Conversation Basics",
+    topic: "Ordering Food",
+    objective:
+      "Order food in Russian by greeting staff, asking for items, and requesting the check naturally.",
+    coreWords: ["я хочу", "пожалуйста", "мне", "меню", "счет", "спасибо"],
+    interestWords: ["без лука", "острый"],
+    sentences: [
+      {
+        text: "Добрый вечер, я хочу столик на двоих, пожалуйста.",
+        phonetic: "dobryi vecher, ya hochu stolik na dvoikh, pozhaluysta",
+        translation: "Good evening, I want a table for two, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "добрый вечер", phonetic: "dobryi vecher", translation: "good evening", type: "core" },
+          { text: "я хочу", phonetic: "ya hochu", translation: "I want", type: "core" },
+          {
+            text: "столик на двоих",
+            phonetic: "stolik na dvoikh",
+            translation: "a table for two",
+            type: "core",
+          },
+          {
+            text: "пожалуйста",
+            phonetic: "pozhaluysta",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Принесите меню, пожалуйста.",
+        phonetic: "prinesite menyu, pozhaluysta",
+        translation: "Bring the menu, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "принесите", phonetic: "prinesite", translation: "bring", type: "core" },
+          {
+            text: "меню",
+            phonetic: "menyu",
+            translation: "menu",
+            type: "core",
+            gender: "neuter",
+            genderNote: "меню = neuter",
+          },
+          {
+            text: "пожалуйста",
+            phonetic: "pozhaluysta",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Мне, я хочу суп и курицу без лука.",
+        phonetic: "mne, ya hochu sup i kuritsu bez luka",
+        translation: "For me, I want soup and chicken without onion.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "мне", phonetic: "mne", translation: "for me", type: "core" },
+          { text: "я хочу", phonetic: "ya hochu", translation: "I want", type: "core" },
+          { text: "суп и курицу", phonetic: "sup i kuritsu", translation: "soup and chicken", type: "core" },
+          {
+            text: "без лука",
+            phonetic: "bez luka",
+            translation: "without onion",
+            type: "interest",
+            interestTopic: "travel",
+          },
+        ],
+      },
+      {
+        text: "Этот соус острый?",
+        phonetic: "etot sous ostryi",
+        translation: "Is this sauce spicy?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "этот соус", phonetic: "etot sous", translation: "this sauce", type: "core" },
+          {
+            text: "острый",
+            phonetic: "ostryi",
+            translation: "spicy",
+            type: "interest",
+            interestTopic: "travel",
+          },
+        ],
+      },
+      {
+        text: "Принесите счет, пожалуйста.",
+        phonetic: "prinesite schet, pozhaluysta",
+        translation: "Bring the check, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "принесите", phonetic: "prinesite", translation: "bring", type: "core" },
+          { text: "счет", phonetic: "schet", translation: "check", type: "core" },
+          {
+            text: "пожалуйста",
+            phonetic: "pozhaluysta",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+          },
+        ],
+      },
+      {
+        text: "Спасибо, все было очень вкусно.",
+        phonetic: "spasibo, vse bylo ochen vkusno",
+        translation: "Thank you, everything was very tasty.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "спасибо",
+            phonetic: "spasibo",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+          },
+          { text: "очень вкусно", phonetic: "ochen vkusno", translation: "very tasty", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-7",
+    language: "ru",
+    title: "Hotel Check-in Basics",
+    topic: "Hotel Check-in",
+    objective:
+      "Check into a hotel in Russian by confirming a reservation, sharing ID, and handling practical front-desk needs.",
+    coreWords: ["у меня есть", "бронь", "номер", "паспорт", "пожалуйста", "ключ"],
+    interestWords: ["инженер", "проект", "по работе"],
+    sentences: [
+      {
+        text: "Здравствуйте, у меня есть бронь.",
+        phonetic: "zdravstvuite, u menya est bron",
+        translation: "Hello, I have a reservation.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "здравствуйте",
+            phonetic: "zdravstvuite",
+            translation: "hello",
+            type: "core",
+            partOfSpeech: "other",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "у меня есть",
+            phonetic: "u menya est",
+            translation: "I have",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "бронь",
+            phonetic: "bron",
+            translation: "reservation",
+            type: "core",
+            partOfSpeech: "noun",
+            imageability: "medium",
+            repetitionPriority: "high",
+          },
+        ],
+      },
+      {
+        text: "Я хочу номер, пожалуйста.",
+        phonetic: "ya hochu nomer, pozhaluysta",
+        translation: "I want a room, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "я хочу",
+            phonetic: "ya hochu",
+            translation: "I want",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "номер",
+            phonetic: "nomer",
+            translation: "room",
+            type: "core",
+            gender: "masculine",
+            genderNote: "номер = masculine",
+            partOfSpeech: "noun",
+            imageability: "high",
+            repetitionPriority: "high",
+          },
+          {
+            text: "пожалуйста",
+            phonetic: "pozhaluysta",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+            partOfSpeech: "other",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+        ],
+      },
+      {
+        text: "Вот мой паспорт.",
+        phonetic: "vot moi pasport",
+        translation: "Here is my passport.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "вот",
+            phonetic: "vot",
+            translation: "here is",
+            type: "core",
+            partOfSpeech: "other",
+            imageability: "low",
+            repetitionPriority: "medium",
+          },
+          {
+            text: "мой паспорт",
+            phonetic: "moi pasport",
+            translation: "my passport",
+            type: "core",
+            partOfSpeech: "noun",
+            imageability: "high",
+            repetitionPriority: "high",
+          },
+        ],
+      },
+      {
+        text: "Меня зовут Карлос.",
+        phonetic: "menya zovut karlos",
+        translation: "My name is Carlos.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "меня зовут",
+            phonetic: "menya zovut",
+            translation: "my name is",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "Карлос",
+            phonetic: "karlos",
+            translation: "Carlos",
+            type: "core",
+            partOfSpeech: "noun",
+            imageability: "medium",
+            repetitionPriority: "low",
+          },
+        ],
+      },
+      {
+        text: "Мне нужен ключ.",
+        phonetic: "mne nuzhen klyuch",
+        translation: "I need a key.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "мне нужен",
+            phonetic: "mne nuzhen",
+            translation: "I need",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "ключ",
+            phonetic: "klyuch",
+            translation: "key",
+            type: "core",
+            partOfSpeech: "noun",
+            imageability: "high",
+            repetitionPriority: "high",
+          },
+        ],
+      },
+      {
+        text: "У меня бронь на две ночи.",
+        phonetic: "u menya bron na dve nochi",
+        translation: "I have a reservation for two nights.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "у меня",
+            phonetic: "u menya",
+            translation: "I have",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "бронь",
+            phonetic: "bron",
+            translation: "reservation",
+            type: "core",
+            partOfSpeech: "noun",
+            imageability: "medium",
+            repetitionPriority: "high",
+          },
+          {
+            text: "на две ночи",
+            phonetic: "na dve nochi",
+            translation: "for two nights",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "medium",
+            repetitionPriority: "medium",
+          },
+        ],
+      },
+      {
+        text: "Я инженер, я здесь по работе.",
+        phonetic: "ya inzhener, ya zdes po rabote",
+        translation: "I am an engineer, I am here for work.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "я инженер",
+            phonetic: "ya inzhener",
+            translation: "I am an engineer",
+            type: "interest",
+            interestTopic: "engineering",
+            partOfSpeech: "phrase",
+            imageability: "medium",
+            repetitionPriority: "low",
+          },
+          {
+            text: "по работе",
+            phonetic: "po rabote",
+            translation: "for work",
+            type: "interest",
+            interestTopic: "engineering",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "low",
+          },
+        ],
+      },
+      {
+        text: "Я работаю над проектом.",
+        phonetic: "ya rabotayu nad proektom",
+        translation: "I am working on a project.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "я работаю",
+            phonetic: "ya rabotayu",
+            translation: "I work",
+            type: "interest",
+            interestTopic: "engineering",
+            partOfSpeech: "phrase",
+            imageability: "low",
+            repetitionPriority: "low",
+          },
+          {
+            text: "над проектом",
+            phonetic: "nad proektom",
+            translation: "on a project",
+            type: "interest",
+            interestTopic: "engineering",
+            partOfSpeech: "phrase",
+            imageability: "medium",
+            repetitionPriority: "low",
+          },
+        ],
+      },
+      {
+        text: "Спасибо, вот мой паспорт.",
+        phonetic: "spasibo, vot moi pasport",
+        translation: "Thank you, here is my passport.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "спасибо",
+            phonetic: "spasibo",
+            translation: "thank you",
+            acceptedMeanings: ["thank you", "thanks", "many thanks"],
+            type: "core",
+            partOfSpeech: "other",
+            imageability: "low",
+            repetitionPriority: "high",
+          },
+          {
+            text: "вот мой паспорт",
+            phonetic: "vot moi pasport",
+            translation: "here is my passport",
+            type: "core",
+            partOfSpeech: "phrase",
+            imageability: "high",
+            repetitionPriority: "high",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-8",
+    language: "ru",
+    title: "Town Center Directions",
+    topic: "Directions",
+    objective: "Ask where places are and understand simple directions in a town center.",
+    coreWords: ["где", "туалет", "ресторан", "идите", "прямо", "поверните", "налево", "направо"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Где туалет?",
+        phonetic: "gde tualet",
+        translation: "Where is the bathroom?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "где", phonetic: "gde", translation: "where", type: "core" },
+          { text: "туалет", phonetic: "tualet", translation: "bathroom", type: "core" },
+        ],
+      },
+      {
+        text: "Где ресторан?",
+        phonetic: "gde restoran",
+        translation: "Where is the restaurant?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "где", phonetic: "gde", translation: "where", type: "core" },
+          { text: "ресторан", phonetic: "restoran", translation: "restaurant", type: "core" },
+        ],
+      },
+      {
+        text: "Идите прямо.",
+        phonetic: "idite pryamo",
+        translation: "Go straight.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "идите", phonetic: "idite", translation: "go", type: "core" },
+          { text: "прямо", phonetic: "pryamo", translation: "straight", type: "core" },
+        ],
+      },
+      {
+        text: "Поверните налево.",
+        phonetic: "poverníte nalevo",
+        translation: "Turn left.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "поверните", phonetic: "poverníte", translation: "turn", type: "core" },
+          { text: "налево", phonetic: "nalevo", translation: "left", type: "core" },
+        ],
+      },
+      {
+        text: "Поверните направо.",
+        phonetic: "poverníte napravo",
+        translation: "Turn right.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "поверните", phonetic: "poverníte", translation: "turn", type: "core" },
+          { text: "направо", phonetic: "napravo", translation: "right", type: "core" },
+        ],
+      },
+      {
+        text: "Это там.",
+        phonetic: "eto tam",
+        translation: "It is there.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "это", phonetic: "eto", translation: "this/it", type: "core" },
+          { text: "там", phonetic: "tam", translation: "there", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-ru-formality-1",
+    language: "ru",
+    title: "Formal and Informal You",
+    topic: "Introducing Yourself",
+    trackType: "language-specific",
+    required: false,
+    specializationType: "formal-informal",
+    objective: "Use ты and вы correctly in simple introductions and greetings.",
+    coreWords: ["ты", "вы", "как тебя зовут", "как вас зовут"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Привет, как тебя зовут?",
+        phonetic: "privet, kak tebya zovut",
+        translation: "Hi, what is your name? (informal)",
+        formality: "informal",
+        contextLabel: "friend / family",
+        contextNote: "Use informal with friends, family, or peers in casual settings.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "привет",
+            phonetic: "privet",
+            translation: "hi",
+            type: "core",
+            formality: "informal",
+            contextLabel: "friend / family",
+          },
+          {
+            text: "как тебя зовут",
+            phonetic: "kak tebya zovut",
+            translation: "what is your name",
+            type: "core",
+            formality: "informal",
+            contextLabel: "friend / family",
+          },
+        ],
+      },
+      {
+        text: "Здравствуйте, как вас зовут?",
+        phonetic: "zdravstvuite, kak vas zovut",
+        translation: "Hello, what is your name? (formal)",
+        formality: "formal",
+        contextLabel: "stranger / staff",
+        contextNote: "Use formal speech when talking to strangers, staff, or elders.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "здравствуйте",
+            phonetic: "zdravstvuite",
+            translation: "hello",
+            type: "core",
+            formality: "formal",
+            contextLabel: "stranger / staff",
+          },
+          {
+            text: "как вас зовут",
+            phonetic: "kak vas zovut",
+            translation: "what is your name",
+            type: "core",
+            formality: "formal",
+            contextLabel: "stranger / staff",
+          },
+        ],
+      },
+      {
+        text: "Ты студент?",
+        phonetic: "ty student",
+        translation: "Are you a student? (informal)",
+        formality: "informal",
+        contextLabel: "friend / family",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "ты",
+            phonetic: "ty",
+            translation: "you (informal)",
+            type: "core",
+            formality: "informal",
+            contextLabel: "friend / family",
+          },
+          { text: "студент", phonetic: "student", translation: "student", type: "core" },
+        ],
+      },
+      {
+        text: "Вы инженер?",
+        phonetic: "vy inzhener",
+        translation: "Are you an engineer? (formal)",
+        formality: "formal",
+        contextLabel: "professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "вы",
+            phonetic: "vy",
+            translation: "you (formal)",
+            type: "core",
+            formality: "formal",
+            contextLabel: "professional",
+          },
+          { text: "инженер", phonetic: "inzhener", translation: "engineer", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-9",
+    language: "ru",
+    title: "Shopping Basics",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective: "Buy items, ask for prices, and complete simple purchases.",
+    coreWords: [
+      "сколько",
+      "это",
+      "стоит",
+      "я хочу",
+      "купить",
+      "у вас есть",
+      "я беру",
+      "картой",
+      "или",
+      "наличными",
+      "пожалуйста",
+    ],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Сколько это стоит?",
+        phonetic: "skolko eto stoit",
+        translation: "How much is this?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "сколько", phonetic: "skolko", translation: "how much", type: "core" },
+          { text: "это", phonetic: "eto", translation: "this", type: "core" },
+          { text: "стоит", phonetic: "stoit", translation: "costs", type: "core" },
+        ],
+      },
+      {
+        text: "Я хочу купить это.",
+        phonetic: "ya khochu kupit eto",
+        translation: "I want to buy this.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "я хочу", phonetic: "ya khochu", translation: "I want", type: "core" },
+          { text: "купить", phonetic: "kupit", translation: "to buy", type: "core" },
+          { text: "это", phonetic: "eto", translation: "this", type: "core" },
+        ],
+      },
+      {
+        text: "У вас есть это?",
+        phonetic: "u vas yest eto",
+        translation: "Do you have this?",
+        formality: "formal",
+        contextLabel: "stranger / staff",
+        contextNote: "Use formal you-form with staff and strangers.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "у вас есть",
+            phonetic: "u vas yest",
+            translation: "do you have",
+            type: "core",
+            formality: "formal",
+            contextLabel: "stranger / staff",
+          },
+          { text: "это", phonetic: "eto", translation: "this", type: "core" },
+        ],
+      },
+      {
+        text: "Я беру это.",
+        phonetic: "ya beru eto",
+        translation: "I’ll take this.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "я беру", phonetic: "ya beru", translation: "I take / I'll take", type: "core" },
+          { text: "это", phonetic: "eto", translation: "this", type: "core" },
+        ],
+      },
+      {
+        text: "Картой или наличными?",
+        phonetic: "kartoy ili nalichnymi",
+        translation: "Card or cash?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "картой", phonetic: "kartoy", translation: "by card", type: "core" },
+          { text: "или", phonetic: "ili", translation: "or", type: "core" },
+          { text: "наличными", phonetic: "nalichnymi", translation: "cash", type: "core" },
+        ],
+      },
+      {
+        text: "Картой, пожалуйста.",
+        phonetic: "kartoy, pozhaluysta",
+        translation: "By card, please.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "картой", phonetic: "kartoy", translation: "by card", type: "core" },
+          {
+            text: "пожалуйста",
+            phonetic: "pozhaluysta",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-10",
+    language: "es",
+    title: "Shopping Essentials",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective: "Ask basic prices and complete simple shopping interactions.",
+    coreWords: ["cuanto cuesta", "quiero comprar", "tarjeta", "efectivo"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Cuanto cuesta esto?",
+        translation: "How much does this cost?",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "cuanto cuesta", translation: "how much does it cost", type: "core" },
+          { text: "esto", translation: "this", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-11",
+    language: "es",
+    title: "Emergencies and Help Basics",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective: "Request urgent help and describe simple emergency needs.",
+    coreWords: ["ayuda", "necesito", "por favor"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Necesito ayuda, por favor.",
+        translation: "I need help, please.",
+        formality: "formal",
+        contextLabel: "stranger / staff",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "necesito", translation: "I need", type: "core" },
+          { text: "ayuda", translation: "help", type: "core" },
+          {
+            text: "por favor",
+            translation: "please",
+            acceptedMeanings: ["please", "if you please", "would you please"],
+            type: "core",
+            formality: "formal",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-12",
+    language: "ru",
+    title: "Basic Introductions",
+    topic: "Introductions",
+    trackType: "core",
+    required: true,
+    objective: "Handle basic introductions in Russian in neutral social situations.",
+    coreWords: ["привет", "меня зовут", "как вас зовут"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Привет, меня зовут Анна.",
+        phonetic: "privet, menya zovut anna",
+        translation: "Hi, my name is Anna.",
+        formality: "informal",
+        contextLabel: "friend / family",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "привет", phonetic: "privet", translation: "hi", type: "core", formality: "informal" },
+          {
+            text: "меня зовут",
+            phonetic: "menya zovut",
+            translation: "my name is",
+            type: "core",
+            formality: "informal",
+          },
+          { text: "Анна", phonetic: "anna", translation: "Anna", type: "core", formality: "informal" },
+        ],
+      },
+    ],
+  },
+  {
+    "id": "draft-es-introductions-and-daily-basics",
+    "language": "es",
+    "sourceType": "core",
+    "title": "Introductions and Daily Basics",
+    "topic": "Introductions",
+    "contextGroup": "General",
+    "context": "General",
+    "scenarioFamily": "intro-general-daily-basics",
+    "scenarioTitle": "Introductions and Daily Basics",
+    "trackType": "core",
+    "required": true,
+    "objective": "Practice high-value self-introduction and daily-use chunks with contextual examples.",
+    "coreWords": [
+      "me llamo",
+      "hola",
+      "soy de",
+      "mucho gusto",
+      "y tu"
+    ],
+    "interestWords": [
+      "yo",
+      "trabajar",
+      "comer",
+      "chile",
+      "madrid"
+    ],
+    "sentences": [
+      {
+        "text": "Hola, me llamo Ana.",
+        "translation": "Hi, my name is Ana.",
+        "formality": "informal",
+        "audioPlaceholder": "[Audio coming soon]",
+        "words": [
+          {
+            "text": "hola",
+            "translation": "hello",
+            "acceptedMeanings": ["hello", "hi"],
+            "type": "core",
+            "formality": "informal",
+            "partOfSpeech": "noun",
+            "imageability": "high",
+            "repetitionPriority": "high"
+          },
+          {
+            "text": "me llamo",
+            "translation": "my name is",
+            "type": "core",
+            "formality": "informal",
+            "partOfSpeech": "phrase",
+            "imageability": "medium",
+            "repetitionPriority": "high"
+          }
+        ]
+      },
+      {
+        "text": "Mucho gusto, Ana. Yo soy Daniel y soy de Chile.",
+        "translation": "Nice to meet you, Ana. I am Daniel and I am from Chile.",
+        "formality": "neutral",
+        "audioPlaceholder": "[Audio coming soon]",
+        "words": [
+          {
+            "text": "mucho gusto",
+            "translation": "nice to meet you",
+            "acceptedMeanings": ["nice to meet you", "nice meeting you"],
+            "type": "core",
+            "formality": "neutral",
+            "partOfSpeech": "phrase",
+            "imageability": "medium",
+            "repetitionPriority": "high"
+          },
+          {
+            "text": "soy de",
+            "translation": "I am from",
+            "type": "core",
+            "formality": "neutral",
+            "partOfSpeech": "phrase",
+            "imageability": "medium",
+            "repetitionPriority": "high"
+          },
+          {
+            "text": "chile",
+            "translation": "Chile",
+            "type": "interest",
+            "formality": "neutral",
+            "partOfSpeech": "noun",
+            "imageability": "high",
+            "repetitionPriority": "medium"
+          }
+        ]
+      }
+    ]
+  }
+  ,
+  {
+    id: "lesson-13",
+    language: "ru",
+    title: "Emergencies and Help Basics",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective: "Ask for urgent help in Russian with simple emergency phrases.",
+    coreWords: ["помогите", "мне нужна помощь"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Помогите, мне нужна помощь.",
+        phonetic: "pomogite, mne nuzhna pomoshch",
+        translation: "Help, I need assistance.",
+        formality: "formal",
+        contextLabel: "stranger / staff",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "помогите", phonetic: "pomogite", translation: "help", type: "core", formality: "formal" },
+          {
+            text: "мне нужна помощь",
+            phonetic: "mne nuzhna pomoshch",
+            translation: "I need assistance",
+            type: "core",
+            formality: "formal",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "lesson-14",
+    language: "ru",
+    title: "Job and Hobbies Basics",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective: "Discuss basic work and hobby information in Russian.",
+    coreWords: ["я работаю", "люблю спорт", "в офисе"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Я работаю в офисе и люблю спорт.",
+        phonetic: "ya rabotayu v ofise i lyublyu sport",
+        translation: "I work in an office and I like sports.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "я работаю", phonetic: "ya rabotayu", translation: "I work", type: "core" },
+          { text: "в офисе", phonetic: "v ofise", translation: "in an office", type: "core" },
+          { text: "люблю спорт", phonetic: "lyublyu sport", translation: "I like sports", type: "core" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-park-playing",
+    language: "es",
+    title: "Park (Playing)",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Park",
+    scenarioFamily: "intro-park-invited-game",
+    scenarioTitle: "Invited to join a game",
+    tier: "medium",
+    trackType: "core",
+    required: true,
+    objective:
+      "Park (casual). You are invited into a park game: greet, exchange names, ask about how often they play, share your own routine, and close politely.",
+    coreWords: ["hola", "¿juegas aquí?", "me llamo", "¿cómo te llamas?", "mucho gusto", "ana"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿juegas aquí en esta cancha?",
+        translation: "Hi, do you play here on this court?",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿juegas aquí?", translation: "do you play here", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, casi todos los martes. ¿Tú vienes seguido?",
+        translation: "Yeah, almost every Tuesday. Do you come often?",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vienes seguido", translation: "you come often", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Vengo después del trabajo. Me llamo Ana.",
+        translation: "I come after work. My name is Ana.",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me llamo", translation: "my name is", type: "core", formality: "informal" },
+          { text: "ana", translation: "Ana", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Yo soy Diego. Perdón, ¿después del trabajo o después de clase?",
+        translation: "I'm Diego. Sorry, after work or after class?",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Diego", translation: "I am ___", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Después del trabajo. Mucho gusto.",
+        translation: "After work. Nice to meet you.",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "informal",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-park-reading",
+    language: "es",
+    title: "Park (Invited Game, Real)",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Park",
+    scenarioFamily: "intro-park-invited-game",
+    scenarioTitle: "Invited to join a game",
+    tier: "real",
+    trackType: "core",
+    required: true,
+    objective:
+      "Park scaffold (real). Stay in the same invited-game conversation while handling interruption, unclear wording, clarification, and natural hesitation.",
+    coreWords: ["hola", "¿juegas aquí?", "me llamo", "¿cómo te llamas?", "mucho gusto", "carlos"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola... ¿ustedes arman reta aquí?",
+        translation: "Hi... do you all set up pickup games here?",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, a veces. Perdón, ¿dijiste reta o renta?",
+        translation: "Yeah, sometimes. Sorry, did you say pickup game or rent?",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "dijiste reta o renta", translation: "did you mean ___?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Reta, sí... partidito corto, creo que tres contra tres. Soy Carlos; juego un rato antes del trabajo.",
+        translation: "Pickup game, yeah... short little match, I think three-on-three. I'm Carlos; I play a bit before work.",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy ___", exerciseAnchorText: "soy Carlos", translation: "I am ___", type: "core", formality: "informal" },
+          { text: "antes del trabajo", translation: "before work", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Ah, ya, más o menos. Yo soy Maya; hoy llego tarde pero me apunto una.",
+        translation: "Ah, got it, more or less. I'm Maya; today I'm late but I'm in for one.",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Maya", translation: "I am ___", type: "core", formality: "informal" }],
+      },
+      {
+        text: "De una, mucho gusto... espera, me amarro la zapatilla y empezamos.",
+        translation: "Sounds good, nice to meet you... wait, let me tie my shoe and we start.",
+        formality: "informal",
+        contextLabel: "park / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "informal",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coffee-stranger",
+    language: "es",
+    title: "Coffee Shop",
+    topic: "Introductions",
+    contextGroup: "Food & Drink",
+    context: "Coffee Shop",
+    scenarioFamily: "intro-coffee-stranger",
+    scenarioTitle: "Conversation with a stranger",
+    tier: "easy",
+    trackType: "core",
+    required: true,
+    objective:
+      "Coffee shop (social). You sit next to someone and start a casual conversation: greet, ask if they come often, introduce yourself, ask their name, and say nice to meet you.",
+    coreWords: ["hola", "¿vienes aquí mucho?", "me llamo", "¿cómo te llamas?", "mucho gusto", "maría"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿está libre esta silla?",
+        translation: "Hi, is this chair free?",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, claro, siéntate.",
+        translation: "Yes, of course, sit down.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "siéntate", translation: "sit down", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Gracias. ¿Cómo estás hoy?",
+        translation: "Thanks. How are you today?",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "¿cómo estás?", translation: "how are you?", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Bien, un poco cansada. ¿Y tú?",
+        translation: "Good, a little tired. And you?",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "bien", translation: "good", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Bien también. Vengo aquí antes del trabajo.",
+        translation: "Good too. I come here before work.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vengo aquí", translation: "I come here", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Qué bien. Me llamo María.",
+        translation: "Great. My name is María.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me llamo", translation: "my name is", type: "core", formality: "informal" },
+          { text: "maría", translation: "María", type: "person-name", formality: "informal" },
+        ],
+      },
+      {
+        text: "Mucho gusto, María. Yo soy Leo.",
+        translation: "Nice to meet you, María. I am Leo.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "informal",
+          },
+          { text: "soy ___", exerciseAnchorText: "soy Leo", translation: "I am ___", type: "core", formality: "informal" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coffee-stranger-past-easy",
+    language: "es",
+    sourceType: "core",
+    title: "Coffee Shop: Tell Your Friend",
+    topic: "Introductions",
+    contextGroup: "Food & Drink",
+    context: "Coffee Shop",
+    scenarioFamily: "intro-coffee-stranger",
+    scenarioTitle: "Conversation with a stranger",
+    tier: "easy",
+    tenseMode: "past-retell",
+    continuationOf: "es-intro-coffee-stranger",
+    discourseGoal: "Tell your friend what happened at the coffee shop.",
+    connectors: ["ayer", "primero", "después"],
+    targetVerbs: ["fui", "pedí", "conocí"],
+    expectedStructures: [
+      "coffee-past-easy:time-and-place",
+      "coffee-past-easy:sequence-order",
+      "coffee-past-easy:meet-someone",
+    ],
+    requiredChunks: ["fui", "ayer", "conocí"],
+    trackType: "core",
+    required: false,
+    objective:
+      "Same coffee shop as before. In a few short lines, tell a friend what you did there yesterday — keep it simple and natural.",
+    coreWords: ["ayer", "fui", "primero", "después", "pedí", "conocí", "mucho gusto", "café", "me llamo"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Oye, ¿qué tal ayer en el café?",
+        translation: "Hey, how was it yesterday at the coffee shop?",
+        formality: "informal",
+        contextLabel: "coffee shop / friend",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "ayer", translation: "yesterday", type: "core", formality: "informal" },
+          { text: "el café", translation: "the coffee shop", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Ayer fui al café antes del trabajo. Primero pedí un café con leche.",
+        translation: "Yesterday I went to the coffee shop before work. First I ordered a latte.",
+        formality: "informal",
+        contextLabel: "coffee shop / friend",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "fui", translation: "I went", type: "core", formality: "informal" },
+          { text: "primero", translation: "first", type: "core", formality: "informal" },
+          { text: "pedí", translation: "I ordered", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Después conocí a una chica muy simpática. Charlamos un poco y me fui contento.",
+        translation: "Then I met a really nice person. We chatted a little and I left happy.",
+        formality: "informal",
+        contextLabel: "coffee shop / friend",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "después", translation: "then / after", type: "core", formality: "informal" },
+          { text: "conocí", translation: "I met", type: "core", formality: "informal" },
+          { text: "charlamos", translation: "we chatted", type: "core", formality: "informal" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coffee-stranger-future-easy",
+    language: "es",
+    sourceType: "core",
+    title: "Coffee Shop: Next Visit",
+    topic: "Introductions",
+    contextGroup: "Food & Drink",
+    context: "Coffee Shop",
+    scenarioFamily: "intro-coffee-stranger",
+    scenarioTitle: "Conversation with a stranger",
+    tier: "easy",
+    tenseMode: "future-plan",
+    continuationOf: "es-intro-coffee-stranger",
+    discourseGoal: "Make plans to go back to the coffee shop.",
+    connectors: ["mañana", "la próxima vez", "después"],
+    targetVerbs: ["voy a ir", "voy a pedir", "quiero"],
+    expectedStructures: [
+      "coffee-future-easy:return-plan",
+      "coffee-future-easy:drink-choice",
+      "coffee-future-easy:invite-or-routine",
+    ],
+    requiredChunks: ["mañana", "voy a", "café"],
+    trackType: "core",
+    required: false,
+    objective:
+      "Same place, next time. Say in a few short lines when you will go back and what you want to order or do there.",
+    coreWords: ["mañana", "la próxima vez", "voy a", "pedir", "café", "aquí", "quiero", "por favor"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "¿Vas a volver a ese café?",
+        translation: "Are you going to go back to that coffee shop?",
+        formality: "informal",
+        contextLabel: "coffee shop / friend",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vas a volver", translation: "you are going to go back", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, mañana voy a ir otra vez antes del trabajo. Voy a pedir un café con leche, como siempre.",
+        translation: "Yes, tomorrow I will go again before work. I am going to order a latte, like always.",
+        formality: "informal",
+        contextLabel: "coffee shop / friend",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "mañana", translation: "tomorrow", type: "core", formality: "informal" },
+          { text: "voy a", translation: "I'm going to", type: "core", formality: "informal" },
+          { text: "pedir", translation: "to order", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "La próxima vez quiero probar el té. Después voy a pedir un dulce, quizás.",
+        translation: "Next time I want to try the tea. Then I am going to order a dessert, maybe.",
+        formality: "informal",
+        contextLabel: "coffee shop / friend",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "la próxima vez", translation: "next time", type: "core", formality: "informal" },
+          { text: "quiero", translation: "I want", type: "core", formality: "informal" },
+          { text: "después", translation: "then / after", type: "core", formality: "informal" },
+          { text: "por favor", translation: "please", type: "core", formality: "informal" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coffee-stranger-02",
+    language: "es",
+    sourceType: "core",
+    title: "Coffee Shop Follow-up",
+    topic: "Introductions",
+    contextGroup: "Food & Drink",
+    context: "Coffee Shop",
+    scenarioFamily: "intro-coffee-stranger",
+    scenarioTitle: "Conversation with a stranger",
+    tier: "medium",
+    difficultyProfile: {
+      unknownWordTarget: 8,
+      speechSpeed: "normal",
+      ambiguity: "medium",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Coffee shop scaffold (medium). Continue a short stranger conversation with one follow-up detail after exchanging names.",
+    coreWords: ["¿vienes aquí mucho?", "me llamo", "¿cómo te llamas?", "trabajo cerca", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿te molesta si me siento aquí?",
+        translation: "Hi, do you mind if I sit here?",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me siento aquí", translation: "I sit here", type: "core", formality: "informal" }],
+      },
+      {
+        text: "No, para nada. ¿Cómo va tu día?",
+        translation: "No, not at all. How is your day going?",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "¿cómo va tu día?", translation: "how is your day going?", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Eh... largo, pero bien. ¿Vienes aquí mucho?",
+        translation: "Uh... long, but good. Do you come here often?",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "¿vienes aquí mucho?", translation: "do you come here often?", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Sí, casi todos los martes. Trabajo cerca, en una consultora.",
+        translation: "Yes, almost every Tuesday. I work nearby, at a consulting firm.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "trabajo cerca", translation: "I work nearby", type: "core", formality: "informal" },
+          { text: "consultora", translation: "consulting firm", type: "interest", formality: "informal" },
+        ],
+      },
+      {
+        text: "Ah, entonces trabajas en oficina.",
+        translation: "Ah, so you work in an office.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajas en oficina", translation: "you work in an office", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Bueno... no exactamente, más bien asesoría de proyectos. Me llamo Lucía.",
+        translation: "Well... not exactly, more like project advisory. My name is Lucía.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "más bien", translation: "more like", type: "core", formality: "informal" },
+          { text: "me llamo", translation: "my name is", type: "core", formality: "informal" },
+          { text: "Lucía", translation: "Lucía", type: "person-name", formality: "informal" },
+        ],
+      },
+      {
+        text: "Yo soy Mateo. Mucho gusto.",
+        translation: "I am Mateo. Nice to meet you.",
+        formality: "informal",
+        contextLabel: "coffee shop / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy ___", exerciseAnchorText: "soy Mateo", translation: "I am ___", type: "core", formality: "informal" },
+          { text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "informal" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coffee-stranger-03",
+    language: "es",
+    sourceType: "core",
+    title: "Coffee Shop Ongoing Chat",
+    topic: "Introductions",
+    contextGroup: "Food & Drink",
+    context: "Coffee Shop",
+    scenarioFamily: "intro-coffee-stranger",
+    scenarioTitle: "Conversation with a stranger",
+    tier: "real",
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Coffee shop scaffold (real). Handle a quick, natural stranger introduction with location and routine details.",
+    coreWords: ["disculpa", "me llamo", "¿cómo te llamas?", "vengo por las mañanas", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Perdón, ¿este asiento... está ocupado?",
+        translation: "Sorry, this seat... is it taken?",
+        formality: "neutral",
+        contextLabel: "coffee shop / busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "perdón", translation: "sorry", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "No, no, siéntate. Está a tope hoy, ¿no?",
+        translation: "No, no, sit down. It's packed today, right?",
+        formality: "neutral",
+        contextLabel: "coffee shop / busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "a tope", translation: "packed", type: "interest", formality: "neutral" },
+        ],
+      },
+      {
+        text: "Sí, total. Vine por un café rápido antes de entrar; vengo del intercambiador y paro dos minutos.",
+        translation: "Yeah, totally. I came for a quick coffee before going in; I come from the transfer hub and stop for two minutes.",
+        formality: "neutral",
+        contextLabel: "coffee shop / busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "vine por", translation: "I came for", type: "core", formality: "neutral" },
+          { text: "intercambiador", translation: "transfer hub", type: "interest", formality: "neutral" },
+        ],
+      },
+      {
+        text: "Ya... yo igual, siempre corriendo. Me llamo Laura, por cierto.",
+        translation: "Yeah... same here, always rushing. My name is Laura, by the way.",
+        formality: "neutral",
+        contextLabel: "coffee shop / busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me llamo", translation: "my name is", type: "core", formality: "neutral" },
+          { text: "Laura", translation: "Laura", type: "person-name", formality: "neutral" },
+        ],
+      },
+      {
+        text: "Andrés. Ah, entonces curras media jornada, ¿no?",
+        translation: "Andrés. Ah, so you work part-time, right?",
+        formality: "neutral",
+        contextLabel: "coffee shop / busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "media jornada", translation: "part-time", type: "interest", formality: "neutral" },
+        ],
+      },
+      {
+        text: "Bueno... no exactamente, más bien turno partido, entro y salgo en horas raras. ¿Te refieres a que voy y vuelvo? Sí, algo así. Mucho gusto; ya llaman mi pedido.",
+        translation: "Well... not exactly, more like a split shift, I go in and out at odd hours. Do you mean I come and go? Yeah, something like that. Nice to meet you; they're already calling my order.",
+        formality: "neutral",
+        contextLabel: "coffee shop / busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "turno partido", translation: "split shift", type: "interest", formality: "neutral" },
+          { text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a que salgo y vuelvo", translation: "do you mean ___?", type: "core", formality: "neutral" },
+          { text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "neutral" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-office-first-day",
+    language: "es",
+    title: "Office (First Day)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-first-day-office",
+    scenarioTitle: "First Day in the Office",
+    tier: "medium",
+    themeTags: ["work", "professional", "first-day"],
+    trackType: "core",
+    required: true,
+    objective:
+      "Office scaffold (medium). Extend the same first-day coworker introduction with work-area and routine details plus one clarification.",
+    coreWords: ["buenos días", "me llamo", "¿cómo se llama?", "mucho gusto", "soy", "nueva", "aquí", "ana"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Buenos días, soy Ana. Es mi primer día.",
+        translation: "Good morning, I'm Ana. It's my first day.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "buenos días", translation: "good morning", type: "core", formality: "formal" }],
+      },
+      {
+        text: "Mucho gusto, Ana. Me llamo Roberto. ¿En qué área trabaja usted?",
+        translation: "Nice to meet you, Ana. My name is Roberto. Which area do you work in?",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me llamo", translation: "my name is", type: "core", formality: "formal" },
+          { text: "¿cómo se llama?", translation: "what is your name (formal)", type: "core", formality: "formal" },
+        ],
+      },
+      {
+        text: "Trabajo en ventas; reviso pedidos cada mañana.",
+        translation: "I work in sales; I review orders every morning.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        contextNote: "Use se llama with usted in formal introductions.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo aquí", translation: "I work here", type: "core", formality: "formal" }],
+      },
+      {
+        text: "Perfecto. Yo estoy en soporte y paso por este piso casi siempre.",
+        translation: "Perfect. I'm in support and I pass by this floor almost always.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "formal",
+          },
+        ],
+      },
+      {
+        text: "Perdón, ¿soporte técnico o soporte a clientes? Técnico. Mucho gusto.",
+        translation: "Sorry, technical support or client support? Technical. Nice to meet you.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy", translation: "I am", type: "core", formality: "formal" },
+          { text: "nueva", translation: "new", type: "core", formality: "formal" },
+          { text: "aquí", translation: "here", type: "core", formality: "formal" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "es-intro-office-client",
+    language: "es",
+    title: "First Day in the Office (Real)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-first-day-office",
+    scenarioTitle: "First Day in the Office",
+    tier: "real",
+    themeTags: ["work", "professional", "first-day"],
+    trackType: "core",
+    required: true,
+    objective:
+      "Office scaffold (real). Keep the same first-day coworker conversation with interruption, hesitation, unclear terms, and one clarification.",
+    coreWords: ["buenos días", "me llamo", "¿cómo se llama?", "mucho gusto", "trabajo aquí", "carlos"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Buenos días... eh, perdón, ¿esta sala es la de onboarding?",
+        translation: "Good morning... uh, sorry, is this the onboarding room?",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "buenos días", translation: "good morning", type: "core", formality: "formal" }],
+      },
+      {
+        text: "Sí, aquí es. Soy Carlos, del equipo de soporte.",
+        translation: "Yes, this is it. I'm Carlos, from the support team.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "me llamo", translation: "my name is", type: "core", formality: "formal" },
+          { text: "carlos", translation: "Carlos", type: "core", formality: "formal" },
+        ],
+      },
+      {
+        text: "Mucho gusto, soy Ana; eh, me dijeron que hoy hago shadowing.",
+        translation: "Nice to meet you, I'm Ana; uh, they told me I'm doing shadowing today.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        contextNote: "Use se llama with usted in formal introductions.",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo se llama?", translation: "what is your name (formal)", type: "core", formality: "formal" }],
+      },
+      {
+        text: "¿Shadowing? ¿Se refiere a acompañar a alguien en turno... o algo así? Sí, más o menos, voy pegada al equipo.",
+        translation: "Shadowing? Do you mean accompanying someone on shift... or something like that? Yes, more or less, I stay close to the team.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "formal",
+          },
+        ],
+      },
+      {
+        text: "Perfecto, le presento al equipo en un minuto... ah, espera, me llama RR. HH.",
+        translation: "Perfect, I'll introduce you to the team in a minute... ah, wait, HR is calling me.",
+        formality: "formal",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo aquí", translation: "I work here", type: "core", formality: "formal" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-office-first-day-00-placeholder",
+    language: "es",
+    sourceType: "core",
+    title: "[Placeholder] First Day in the Office (Easy)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-first-day-office",
+    scenarioTitle: "First Day in the Office",
+    tier: "easy",
+    themeTags: ["placeholder", "work", "first-day"],
+    trackType: "core",
+    required: true,
+    objective:
+      "Placeholder tier scaffold for first-day office introduction (easy). Content draft pending.",
+    coreWords: ["hola", "soy ___", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, soy Ana. Es mi primer día en la oficina.",
+        translation: "Hi, I am Ana. It is my first day in the office.",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", type: "core" }],
+      },
+      {
+        text: "Mucho gusto, Ana. Soy Roberto.",
+        translation: "Nice to meet you, Ana. I am Roberto.",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Roberto", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Qué bien, Ana. ¿Qué tal tu mañana?",
+        translation: "Very nice, Ana. How is your morning going?",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿qué tal ___?", exerciseAnchorText: "qué tal tu mañana", translation: "how is ___?", type: "core" }],
+      },
+      {
+        text: "Bien, gracias. ¿Trabajas en este piso?",
+        translation: "Good, thanks. Do you work on this floor?",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", type: "core" }],
+      },
+      {
+        text: "Sí, trabajo aquí. Mucho gusto, Ana. Te acompaño a la sala de bienvenida.",
+        translation: "Yes, I work here. Nice to meet you, Ana. I will walk you to the welcome room.",
+        contextLabel: "office / professional",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-client-01-placeholder",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Client (Easy)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-meeting-client",
+    scenarioTitle: "Meeting a Client",
+    tier: "easy",
+    themeTags: ["work", "client"],
+    trackType: "core",
+    required: true,
+    objective:
+      "Client meeting (easy). Open with greeting and name exchange, add light small talk, and close by starting the meeting.",
+    coreWords: ["buenos días", "soy ___", "mucho gusto", "¿qué tal ___?", "empezamos"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Buenos días, soy Laura del equipo de ventas. ¿Eres Daniel de Nortec?",
+        translation: "Good morning, I am Laura from the sales team. Are you Daniel from Nortec?",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "buenos días", translation: "good morning", type: "core" }],
+      },
+      {
+        text: "Sí, soy Daniel. Encantado.",
+        translation: "Yes, I am Daniel. Nice to meet you.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Daniel", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Mucho gusto, Daniel. ¿Qué tal el viaje a la oficina?",
+        translation: "Nice to meet you, Daniel. How was the trip to the office?",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿qué tal ___?", exerciseAnchorText: "qué tal el viaje", translation: "how was ___?", type: "core" }],
+      },
+      {
+        text: "Bien, corto hoy. Gracias por recibirme.",
+        translation: "Good, short today. Thanks for receiving me.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", type: "core" }],
+      },
+      {
+        text: "Perfecto, pasamos a la sala y empezamos.",
+        translation: "Perfect, we can go to the room and start.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "empezamos", translation: "we start", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-client-02-placeholder",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Client (Medium)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-meeting-client",
+    scenarioTitle: "Meeting a Client",
+    tier: "medium",
+    themeTags: ["work", "client"],
+    difficultyProfile: {
+      unknownWordTarget: 8,
+      speechSpeed: "normal",
+      ambiguity: "medium",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Client meeting (medium). Keep the same opening scenario, add role detail and weekly routine, plus one mild ambiguity to clarify.",
+    coreWords: ["buenos días", "soy ___", "reviso ___", "cada ___", "¿te refieres a ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Buenos días, soy Laura; llevo la cuenta de Nortec en ventas.",
+        translation: "Good morning, I am Laura; I handle Nortec's account in sales.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "buenos días", translation: "good morning", type: "core" }],
+      },
+      {
+        text: "Hola, Daniel. Sí, soy el contacto de compras; vengo los jueves para revisar avances.",
+        translation: "Hi, Daniel. Yes, I am the purchasing contact; I come on Thursdays to review progress.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "cada ___", exerciseAnchorText: "cada jueves", translation: "every ___", type: "core" }],
+      },
+      {
+        text: "Perfecto. Yo preparo el reporte semanal y hoy traigo la versión de cierre.",
+        translation: "Perfect. I prepare the weekly report and today I bring the closing version.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "reviso ___", exerciseAnchorText: "reviso avances", translation: "I review ___", type: "core" }],
+      },
+      {
+        text: "Perdón, ¿de cierre como cierre mensual o cierre de sprint?",
+        translation: "Sorry, by closing do you mean monthly closing or sprint closing?",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a cierre mensual", translation: "do you mean ___?", type: "core" }],
+      },
+      {
+        text: "De sprint, el mensual lo vemos el lunes. Si te parece, arrancamos.",
+        translation: "Sprint closing, we can review the monthly one on Monday. If that works, we can start.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "arrancamos", translation: "we start", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-client-03-placeholder",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Client (Real)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-meeting-client",
+    scenarioTitle: "Meeting a Client",
+    tier: "real",
+    themeTags: ["work", "client"],
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Client meeting (real). Same opening scenario with hesitation, one unclear term, and one clarification before closing naturally.",
+    coreWords: ["buenos días", "soy ___", "¿te refieres a ___?", "handoff", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Buenos días... eh, soy Laura, la de ventas que lleva su cuenta.",
+        translation: "Good morning... uh, I am Laura, the sales person who handles your account.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "buenos días", translation: "good morning", type: "core" }],
+      },
+      {
+        text: "Sí, Daniel, del lado de compras. Perdón, vengo medio justo, el ascensor se paró.",
+        translation: "Yes, Daniel, from purchasing. Sorry, I arrived a bit rushed, the elevator stopped.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Daniel", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Tranqui. Hoy quería revisar el handoff de pedidos y lo que quedó colgado.",
+        translation: "No worries. Today I wanted to review the handoff of orders and what was left pending.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "handoff", translation: "handoff", type: "core" }],
+      },
+      {
+        text: "¿Handoff... te refieres al traspaso entre compras y ventas? Sí, más o menos, con pendientes de ambos lados.",
+        translation: "Handoff... do you mean the transfer between purchasing and sales? Yes, more or less, with pending items on both sides.",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "te refieres al traspaso", translation: "do you mean ___?", type: "core" }],
+      },
+      {
+        text: "Buenísimo, entonces vemos eso primero y dejamos lo demás para el cierre, ¿te va?",
+        translation: "Great, then we review that first and leave the rest for closing, works for you?",
+        contextLabel: "meeting client",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-gym-casual",
+    language: "es",
+    title: "Gym (Casual)",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Gym",
+    scenarioFamily: "intro-gym-between-sets",
+    scenarioTitle: "Short conversation between sets",
+    tier: "easy",
+    trackType: "core",
+    required: true,
+    objective:
+      "Gym break (casual). Start a short introduction, ask if they come often, exchange names, and close politely.",
+    coreWords: ["hola", "¿vienes aquí mucho?", "me llamo", "¿cómo te llamas?", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿vas a usar esta banca?",
+        translation: "Hi, are you going to use this bench?",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "informal" }],
+      },
+      {
+        text: "No, está libre. ¿Todo bien?",
+        translation: "No, it's free. Everything good?",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿todo bien?", translation: "everything good?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, gracias. ¿Vienes aquí mucho?",
+        translation: "Yeah, thanks. Do you come here often?",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "¿vienes aquí mucho?", translation: "do you come here often", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Casi todos los días. Me llamo Diego.",
+        translation: "Almost every day. My name is Diego.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Yo soy Paula. Mucho gusto.",
+        translation: "I am Paula. Nice to meet you.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "informal",
+          },
+        ],
+      },
+      {
+        text: "Igual, Paula. Te dejo seguir con tu serie.",
+        translation: "Likewise, Paula. I'll let you continue your set.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "tu serie", translation: "your set", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-gym-casual-02",
+    language: "es",
+    sourceType: "core",
+    title: "Gym Break Conversation",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Gym",
+    scenarioFamily: "intro-gym-between-sets",
+    scenarioTitle: "Short conversation between sets",
+    tier: "medium",
+    difficultyProfile: {
+      unknownWordTarget: 8,
+      speechSpeed: "normal",
+      ambiguity: "medium",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Gym scaffold (medium). Keep a short introduction going with a routine follow-up between sets.",
+    coreWords: ["hola", "¿vienes aquí mucho?", "me llamo", "entreno por la tarde", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿te falta mucho para terminar?",
+        translation: "Hi, do you need much longer to finish?",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te falta mucho?", translation: "do you need much longer?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Un minuto más, perdón. ¿Cómo estás?",
+        translation: "One more minute, sorry. How are you?",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo estás?", translation: "how are you?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Todo bien, gracias. Siempre está lleno a esta hora.",
+        translation: "All good, thanks. It's always full at this hour.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "todo bien", translation: "all good", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Sí, yo entreno por la tarde casi siempre.",
+        translation: "Yeah, I train in the afternoon almost always.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "entreno por la tarde", translation: "I train in the afternoon", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Por cierto, me llamo Paula. Perdón, ¿tarde como seis o más noche?",
+        translation: "By the way, my name is Paula. Sorry, by afternoon do you mean around six or later at night?",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Como seis y media. Nico, mucho gusto, Paula.",
+        translation: "Around six thirty. Nico, nice to meet you, Paula.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Igual. Dale, te toca a ti.",
+        translation: "Same here. Go ahead, it's your turn.",
+        formality: "informal",
+        contextLabel: "gym / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "te toca", translation: "it's your turn", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-gym-casual-03",
+    language: "es",
+    sourceType: "core",
+    title: "Gym Floor Quick Intro",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Gym",
+    scenarioFamily: "intro-gym-between-sets",
+    scenarioTitle: "Short conversation between sets",
+    tier: "real",
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Gym scaffold (real). Keep the same between-sets introduction while adding unclear terms, clarification, hesitation, and interruption.",
+    coreWords: ["¿te falta mucho?", "me llamo", "¿cómo te llamas?", "entreno aquí", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Eh, ¿te queda mucho? Estoy esperando esa máquina.",
+        translation: "Uh, do you have long left? I'm waiting for that machine.",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te falta mucho?", translation: "do you need much longer?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Nada, dos repeticiones y te la paso. ¿Todo bien?",
+        translation: "Nothing, two reps and I'll pass it to you. All good?",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "¿todo bien?", translation: "all good?", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Sí, bien... solo vengo apurada hoy.",
+        translation: "Yeah, good... I'm just in a rush today.",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "vengo apurada", translation: "I'm in a rush", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Te entiendo. Yo entreno aquí después del trabajo, casi diario, en circuito.",
+        translation: "I get it. I train here after work, almost daily, in circuits.",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "entreno aquí", translation: "I train here", type: "core", formality: "informal" }],
+      },
+      {
+        text: "¿En circuito? ¿Te refieres a rondas sin parar? Sí, algo así, casi sin descanso.",
+        translation: "In circuits? Do you mean rounds without stopping? Yeah, something like that, almost no rest.",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Por cierto, me llamo Iván.",
+        translation: "By the way, my name is Iván.",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Julia. Mucho gusto... va, usa la máquina.",
+        translation: "Julia. Nice to meet you... go ahead, use the machine.",
+        formality: "informal",
+        contextLabel: "gym / active",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "usa la máquina", translation: "use the machine", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-party-casual",
+    language: "es",
+    title: "Party (Casual)",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Party",
+    scenarioFamily: "intro-party-meet-someone",
+    scenarioTitle: "Meet someone at a party",
+    tier: "easy",
+    trackType: "core",
+    required: true,
+    objective:
+      "Small gathering (casual). Greet, introduce yourself, share where you are from, and ask where the other person is from.",
+    coreWords: ["hola", "me llamo", "soy de ___", "¿de dónde eres?", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿todo bien?",
+        translation: "Hi, all good?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, bien. Hay mucha gente hoy.",
+        translation: "Yeah, good. There are lots of people today.",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucha gente", translation: "lots of people", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, bastante. Me llamo Sofía.",
+        translation: "Yeah, quite a lot. My name is Sofía.",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Yo soy Marco. ¿De dónde eres?",
+        translation: "I am Marco. Where are you from?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy ___", exerciseAnchorText: "soy Marco", translation: "I am ___", type: "core", formality: "informal" },
+          { text: "¿de dónde eres?", translation: "where are you from", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Soy de México, ¿y tú?",
+        translation: "I'm from Mexico, and you?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy de ___", exerciseAnchorText: "soy de México", translation: "I am from ___", type: "core", formality: "informal" }],
+      },
+      {
+        text: "De Chile. Mucho gusto, Sofía.",
+        translation: "From Chile. Nice to meet you, Sofía.",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          {
+            text: "mucho gusto",
+            translation: "nice to meet you",
+            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
+            type: "core",
+            formality: "informal",
+          },
+        ],
+      },
+      {
+        text: "Igualmente, Marco. Nos vemos por ahí.",
+        translation: "Likewise, Marco. See you around.",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "nos vemos", translation: "see you around", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-party-casual-02",
+    language: "es",
+    sourceType: "core",
+    title: "Party Introduction Follow-up",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Party",
+    scenarioFamily: "intro-party-meet-someone",
+    scenarioTitle: "Meet someone at a party",
+    tier: "medium",
+    difficultyProfile: {
+      unknownWordTarget: 8,
+      speechSpeed: "normal",
+      ambiguity: "medium",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Party scaffold (medium). Extend a greeting with origin and one extra social detail.",
+    coreWords: ["hola", "me llamo", "soy de ___", "¿de dónde eres?", "vengo con amigos", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿cómo va la fiesta?",
+        translation: "Hi, how's the party going?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "hola", translation: "hi", type: "core", formality: "informal" },
+          { text: "¿cómo va?", translation: "how's it going?", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Bien, tranquila por ahora. ¿Tú vienes seguido?",
+        translation: "Good, calm for now. Do you come often?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "vienes seguido", translation: "you come often", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "A veces. Vine con unos amigos del trabajo.",
+        translation: "Sometimes. I came with some friends from work.",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vengo con amigos", translation: "I came with friends", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Qué bien. Me llamo Sofía, por cierto. ¿Del trabajo de oficina o de tienda?",
+        translation: "Nice. My name is Sofía, by the way. From office work or store work?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Andrés, mucho gusto. De oficina, en soporte.",
+        translation: "Andrés, nice to meet you. Office work, in support.",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "informal" }],
+      },
+      {
+        text: "¿De dónde eres, Andrés?",
+        translation: "Where are you from, Andrés?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "De Quito. ¿Y tú?",
+        translation: "From Quito. And you?",
+        formality: "informal",
+        contextLabel: "party / casual",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy de ___", exerciseAnchorText: "de Quito", translation: "from ___", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-party-casual-03",
+    language: "es",
+    sourceType: "core",
+    title: "Party Crowd Introduction",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Party",
+    scenarioFamily: "intro-party-meet-someone",
+    scenarioTitle: "Meet someone at a party",
+    tier: "real",
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Party scaffold (real). Keep the same party-introduction flow with hesitation, unclear terms, clarification, and natural interruption.",
+    coreWords: ["hola", "¿cómo te llamas?", "soy ___", "soy de ___", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "¡Hola! Eh, perdón, con la música casi no te oigo.",
+        translation: "Hi! Uh, sorry, with the music I can barely hear you.",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Sí, está fuerte. Soy Valeria... ¿tú?",
+        translation: "Yeah, it's loud. I'm Valeria... and you?",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy ___", exerciseAnchorText: "soy Valeria", translation: "I am ___", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Tomás. Vine con unos amigos de la uni, del pre.",
+        translation: "Tomás. I came with some college friends, from pre.",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "vine con amigos", translation: "I came with friends", type: "core", formality: "informal" },
+        ],
+      },
+      {
+        text: "Perdón, ¿del pre como pregrado? Sí... más o menos, el curso de entrada, recién arrancamos.",
+        translation: "Sorry, pre as in undergraduate prep? Yeah... kind of, the entry course, we just started.",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "recién entré", translation: "I just came in", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Oye, ¿de dónde eres?",
+        translation: "Hey, where are you from?",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core", formality: "informal" }],
+      },
+      {
+        text: "De Bogotá. ¿Y tú?",
+        translation: "From Bogotá. And you?",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy de ___", exerciseAnchorText: "de Bogotá", translation: "from ___", type: "core", formality: "informal" }],
+      },
+      {
+        text: "De Cali. Mucho gusto, Tomás... espera, gritan mi nombre.",
+        translation: "From Cali. Nice to meet you, Tomás... wait, they're shouting my name.",
+        formality: "informal",
+        contextLabel: "party / noisy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-cafe-snack",
+    language: "es",
+    title: "Café Snack",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "Café counter (casual). Order two small items with simple high-frequency request chunks.",
+    coreWords: ["hola", "quiero ___", "para mí", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "informal",
+        contextLabel: "cafe / snack",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "informal" }],
+      },
+      {
+        text: "Quiero café.",
+        translation: "I want coffee.",
+        formality: "informal",
+        contextLabel: "cafe / snack",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero café", translation: "I want coffee", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Quiero pan.",
+        translation: "I want bread.",
+        formality: "informal",
+        contextLabel: "cafe / snack",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero pan", translation: "I want bread", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Para mí.",
+        translation: "For me.",
+        formality: "informal",
+        contextLabel: "cafe / snack",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "para mí", translation: "for me", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thanks.",
+        formality: "informal",
+        contextLabel: "cafe / snack",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-restaurant-question",
+    language: "es",
+    title: "Restaurant Question",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "Restaurant table (question). Ask about water, then place a very short order politely.",
+    coreWords: ["hola", "¿tiene ___?", "quiero ___", "por favor", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "restaurant / question",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "¿Tiene agua?",
+        translation: "Do you have water?",
+        formality: "neutral",
+        contextLabel: "restaurant / question",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene agua?", translation: "do you have water", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Quiero agua.",
+        translation: "I want water.",
+        formality: "neutral",
+        contextLabel: "restaurant / question",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero agua", translation: "I want water", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Por favor.",
+        translation: "Please.",
+        formality: "neutral",
+        contextLabel: "restaurant / question",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "por favor", translation: "please", acceptedMeanings: ["please"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "restaurant / question",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-station",
+    language: "es",
+    title: "Station Directions",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Street directions (station). Ask for the station and understand a short near + straight instruction.",
+    coreWords: ["hola", "¿dónde está ___?", "está cerca", "sigue recto", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "station / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "¿Dónde está la estación?",
+        translation: "Where is the station?",
+        formality: "neutral",
+        contextLabel: "station / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está la estación?", translation: "where is the station", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Está cerca.",
+        translation: "It is near.",
+        formality: "neutral",
+        contextLabel: "station / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está cerca", translation: "it is near", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Sigue recto.",
+        translation: "Go straight.",
+        formality: "neutral",
+        contextLabel: "station / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "sigue recto", translation: "go straight", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thanks.",
+        formality: "neutral",
+        contextLabel: "station / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-hotel",
+    language: "es",
+    title: "Hotel Directions",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Street directions (hotel). Ask for the hotel and understand a far + right-turn response.",
+    coreWords: ["hola", "¿dónde está ___?", "está lejos", "a la derecha", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "hotel / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "¿Dónde está el hotel?",
+        translation: "Where is the hotel?",
+        formality: "neutral",
+        contextLabel: "hotel / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está el hotel?", translation: "where is the hotel", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Está lejos.",
+        translation: "It is far.",
+        formality: "neutral",
+        contextLabel: "hotel / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está lejos", translation: "it is far", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "A la derecha.",
+        translation: "To the right.",
+        formality: "neutral",
+        contextLabel: "hotel / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "a la derecha", translation: "to the right", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thanks.",
+        formality: "neutral",
+        contextLabel: "hotel / directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-ask-price",
+    language: "es",
+    title: "Store Price",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "Store purchase talk. Ask price, state buying intent, and close politely with reusable shopping chunks.",
+    coreWords: ["hola", "¿cuánto cuesta esto?", "quiero comprar esto", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "store / asking price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "¿Cuánto cuesta esto?",
+        translation: "How much does this cost?",
+        formality: "neutral",
+        contextLabel: "store / asking price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cuánto cuesta esto?", translation: "how much does this cost", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Quiero comprar esto.",
+        translation: "I want to buy this.",
+        formality: "neutral",
+        contextLabel: "store / asking price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero comprar esto", translation: "I want to buy this", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "store / asking price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-find-item",
+    language: "es",
+    title: "Store Item Search",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "Store assistance. Ask for an item and confirm availability using short, repeatable shopping phrases.",
+    coreWords: ["hola", "busco esto", "¿tiene ___?", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "store / finding item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Busco esto.",
+        translation: "I am looking for this.",
+        formality: "neutral",
+        contextLabel: "store / finding item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco esto", translation: "I am looking for this", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "¿Tiene esto?",
+        translation: "Do you have this?",
+        formality: "neutral",
+        contextLabel: "store / finding item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene esto?", translation: "do you have this", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "store / finding item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-checkin",
+    language: "es",
+    title: "Hotel Check-in Basic",
+    topic: "Hotel Check-in",
+    trackType: "core",
+    required: true,
+    objective:
+      "Hotel front desk check-in. Confirm reservation and entering with short practical phrases.",
+    coreWords: ["hola", "tengo una reserva", "quiero entrar", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "hotel front desk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Tengo una reserva.",
+        translation: "I have a reservation.",
+        formality: "neutral",
+        contextLabel: "hotel front desk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "tengo una reserva", translation: "I have a reservation", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Quiero entrar.",
+        translation: "I want to enter.",
+        formality: "neutral",
+        contextLabel: "hotel front desk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero entrar", translation: "I want to enter", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "hotel front desk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-room-issue",
+    language: "es",
+    title: "Hotel Room Issue",
+    topic: "Hotel Check-in",
+    trackType: "core",
+    required: true,
+    objective:
+      "Hotel assistance. Report a room issue and ask for help with clear, repeatable support phrases.",
+    coreWords: ["hola", "mi habitación no está bien", "necesito ___", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "hotel / room issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Mi habitación no está bien.",
+        translation: "My room is not okay.",
+        formality: "neutral",
+        contextLabel: "hotel / room issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mi habitación no está bien", translation: "my room is not okay", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Necesito ayuda.",
+        translation: "I need help.",
+        formality: "neutral",
+        contextLabel: "hotel / room issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ayuda", translation: "I need help", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "hotel / room issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-sick",
+    language: "es",
+    title: "Feeling Sick",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Public-place help request. Say you feel bad and ask for help in short emergency-ready speech.",
+    coreWords: ["hola", "me siento ___", "necesito ___", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "neutral",
+        contextLabel: "public place / help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Me siento mal.",
+        translation: "I feel sick.",
+        formality: "neutral",
+        contextLabel: "public place / help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me siento mal", translation: "I feel sick", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Necesito ayuda.",
+        translation: "I need help.",
+        formality: "neutral",
+        contextLabel: "public place / help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ayuda", translation: "I need help", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "public place / help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-lost-item",
+    language: "es",
+    title: "Lost Item Help",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Public-place assistance. Report a lost phone and request help with simple conversational emergency phrases.",
+    coreWords: ["hola", "perdí mi teléfono", "¿puede ayudarme?", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "formal",
+        contextLabel: "public place / lost item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "formal" }],
+      },
+      {
+        text: "Perdí mi teléfono.",
+        translation: "I lost my phone.",
+        formality: "formal",
+        contextLabel: "public place / lost item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "perdí mi teléfono", translation: "I lost my phone", type: "core", formality: "formal" }],
+      },
+      {
+        text: "¿Puede ayudarme?",
+        translation: "Can you help me?",
+        formality: "formal",
+        contextLabel: "public place / lost item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿puede ayudarme?", translation: "can you help me", type: "core", formality: "formal" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "formal",
+        contextLabel: "public place / lost item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "formal" }],
+      },
+    ],
+  },
+  {
+    id: "es-work-busy",
+    language: "es",
+    title: "Work Busy",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "Daily work talk. Say you work a lot, feel tired, and need rest in connected conversational speech.",
+    coreWords: ["hola", "trabajo mucho", "estoy ___", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola.",
+        translation: "Hi.",
+        formality: "informal",
+        contextLabel: "daily conversation / work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", acceptedMeanings: ["hello", "hi"], type: "core", formality: "informal" }],
+      },
+      {
+        text: "Trabajo mucho.",
+        translation: "I work a lot.",
+        formality: "informal",
+        contextLabel: "daily conversation / work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo mucho", translation: "I work a lot", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Estoy cansado.",
+        translation: "I am tired.",
+        formality: "informal",
+        contextLabel: "daily conversation / work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy cansado", translation: "I am tired", type: "core", formality: "informal" }],
+      },
+      {
+        text: "Necesito descanso.",
+        translation: "I need rest.",
+        formality: "informal",
+        contextLabel: "daily conversation / work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito descanso", translation: "I need rest", type: "core", formality: "informal" }],
+      },
+    ],
+  },
+  {
+    id: "es-work-schedule",
+    language: "es",
+    title: "Work Schedule",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "Simple schedule planning. Talk about working today/tomorrow and not working now with repeatable structures.",
+    coreWords: ["trabajo hoy", "trabajo mañana", "no trabajo ahora", "gracias"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Trabajo hoy.",
+        translation: "I work today.",
+        formality: "neutral",
+        contextLabel: "planning / schedule",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo hoy", translation: "I work today", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Trabajo mañana.",
+        translation: "I work tomorrow.",
+        formality: "neutral",
+        contextLabel: "planning / schedule",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo mañana", translation: "I work tomorrow", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "No trabajo ahora.",
+        translation: "I do not work now.",
+        formality: "neutral",
+        contextLabel: "planning / schedule",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "no trabajo ahora", translation: "I do not work now", type: "core", formality: "neutral" }],
+      },
+      {
+        text: "Gracias.",
+        translation: "Thank you.",
+        formality: "neutral",
+        contextLabel: "planning / schedule",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thank you", acceptedMeanings: ["thanks", "thank you"], type: "core", formality: "neutral" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-classroom-01",
+    language: "es",
+    sourceType: "core",
+    title: "Classroom Introduction",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "School",
+    scenarioFamily: "intro-school-introductions",
+    scenarioTitle: "Introducing yourself to class",
+    tier: "easy",
+    trackType: "core",
+    required: true,
+    objective:
+      "Classroom context. Introduce yourself, ask a classmate's name, and share basic study context using short conversational phrases.",
+    coreWords: ["soy ___", "¿cómo te llamas?", "estudio ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿este asiento está libre?",
+        translation: "Hi, is this seat free?",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "está libre", translation: "is free", type: "core" },
+        ],
+      },
+      {
+        text: "Sí, claro. ¿Cómo estás?",
+        translation: "Yes, of course. How are you?",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo estás?", translation: "how are you?", type: "core" }],
+      },
+      {
+        text: "Bien, un poco nerviosa. Soy estudiante nueva.",
+        translation: "Good, a little nervous. I am a new student.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy estudiante nueva", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Tranqui. Yo me llamo Diego.",
+        translation: "Relax. My name is Diego.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me llamo", translation: "my name is", type: "core" }],
+      },
+      {
+        text: "Mucho gusto, Diego. ¿Qué estudias?",
+        translation: "Nice to meet you, Diego. What do you study?",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+      {
+        text: "Estudio español. Vamos a estar en el mismo grupo.",
+        translation: "I study Spanish. We'll be in the same group.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estudio ___", exerciseAnchorText: "estudio español", translation: "I study ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-neighbor-01",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Neighbor",
+    topic: "Introductions",
+    contextGroup: "Residential",
+    context: "Home / Neighborhood",
+    scenarioFamily: "intro-neighbor-introduction",
+    scenarioTitle: "Meeting a neighbor",
+    tier: "easy",
+    trackType: "core",
+    required: true,
+    objective:
+      "Apartment hallway scenario. Introduce yourself to a neighbor and exchange basic origin/location phrases.",
+    coreWords: ["vivo en ___", "soy ___", "¿de dónde eres?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿eres nueva por aquí?",
+        translation: "Hi, are you new around here?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "por aquí", translation: "around here", type: "core" }],
+      },
+      {
+        text: "Sí, acabo de mudarme al apartamento tres.",
+        translation: "Yeah, I just moved into apartment three.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vivo en ___", exerciseAnchorText: "apartamento tres", translation: "I live in ___", type: "core" }],
+      },
+      {
+        text: "Bienvenida. Soy tu vecina, Marta.",
+        translation: "Welcome. I'm your neighbor, Marta.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy tu vecina", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Gracias, Marta. ¿Cómo estás?",
+        translation: "Thanks, Marta. How are you?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo estás?", translation: "how are you?", type: "core" }],
+      },
+      {
+        text: "Todo bien. ¿De dónde eres?",
+        translation: "All good. Where are you from?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core" }],
+      },
+      {
+        text: "Soy de Perú. Mucho gusto.",
+        translation: "I'm from Peru. Nice to meet you.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-neighbor-02",
+    language: "es",
+    sourceType: "core",
+    title: "Neighbor Follow-up Greeting",
+    topic: "Introductions",
+    contextGroup: "Residential",
+    context: "Home / Neighborhood",
+    scenarioFamily: "intro-neighbor-introduction",
+    scenarioTitle: "Meeting a neighbor",
+    tier: "medium",
+    difficultyProfile: {
+      unknownWordTarget: 8,
+      speechSpeed: "normal",
+      ambiguity: "medium",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Neighbor scaffold (medium). Expand the same hallway introduction with routine/job details and one clarification.",
+    coreWords: ["vivo en ___", "soy ___", "¿de dónde eres?", "acabo de llegar", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, creo que no nos habíamos visto.",
+        translation: "Hi, I think we hadn't seen each other.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "no nos habíamos visto", translation: "we hadn't met", type: "core" }],
+      },
+      {
+        text: "Es verdad. Soy tu nuevo vecino, del cinco.",
+        translation: "That's true. I'm your new neighbor, from apartment five.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy tu nuevo vecino", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Qué bien. Yo bajo al trabajo temprano todos los días.",
+        translation: "Nice. I head down to work early every day.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo te está yendo?", translation: "how is it going?", type: "core" }],
+      },
+      {
+        text: "Bien, todavía me ubico. Acabo de llegar y vuelvo tarde casi siempre.",
+        translation: "Good, I'm still getting oriented. I just arrived and I come back late almost always.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "acabo de llegar", translation: "I just arrived", type: "core" }],
+      },
+      {
+        text: "Normal. Oye, ¿de dónde eres?",
+        translation: "Totally normal. Hey, where are you from?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core" }],
+      },
+      {
+        text: "Soy de Lima. ¿Y tú?",
+        translation: "I'm from Lima. And you?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy de ___", exerciseAnchorText: "soy de Lima", translation: "I am from ___", type: "core" }],
+      },
+      {
+        text: "De Córdoba. Perdón, ¿dijiste que vuelves tarde siempre? Sí. Mucho gusto, vecino.",
+        translation: "From Córdoba. Sorry, did you say you always come back late? Yes. Nice to meet you, neighbor.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-neighbor-03",
+    language: "es",
+    sourceType: "core",
+    title: "Neighbor Building Conversation",
+    topic: "Introductions",
+    contextGroup: "Residential",
+    context: "Home / Neighborhood",
+    scenarioFamily: "intro-neighbor-introduction",
+    scenarioTitle: "Meeting a neighbor",
+    tier: "real",
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Neighbor scaffold (real). Keep the same hallway introduction while adding hesitation, unclear terms, clarification, and natural interruption.",
+    coreWords: ["hola", "vivo en ___", "¿de dónde eres?", "me mudé hace poco", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿vives en este edificio también?",
+        translation: "Hi, do you live in this building too?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", type: "core" }],
+      },
+      {
+        text: "Sí, en el cuarto. Bueno, tú eres la del cinco, ¿no?",
+        translation: "Yeah, on the fourth. Well, you're the one from five, right?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vivo en ___", exerciseAnchorText: "en el cuarto", translation: "I live in ___", type: "core" }],
+      },
+      {
+        text: "Sí, justo... perdón, todavía no ubico bien el portero eléctrico.",
+        translation: "Yeah, exactly... sorry, I still don't know the building intercom well.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "no conozco a nadie", translation: "I don't know anyone", type: "core" }],
+      },
+      {
+        text: "¿El portero, el timbre de la entrada o el conserje? Sí, el timbre... creo, todavía me confundo.",
+        translation: "The intercom, the entrance buzzer, or the doorman? The buzzer, I think... I still get confused.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mudanza", translation: "move", type: "core" }],
+      },
+      {
+        text: "Tranqui, pasa al principio; yo salgo temprano al trabajo y te explico si quieres.",
+        translation: "No worries, that happens at first; I leave early for work and can explain if you want.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me mudé hace poco", translation: "I moved recently", type: "core" }],
+      },
+      {
+        text: "Te entiendo. Oye, ¿de dónde eres?",
+        translation: "I get it. Hey, where are you from?",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core" }],
+      },
+      {
+        text: "De Arequipa. Mucho gusto... espera, suena mi llave.",
+        translation: "From Arequipa. Nice to meet you... wait, my keys are jingling.",
+        contextLabel: "meeting neighbor",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coworker-01",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Coworker",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-meeting-coworker",
+    scenarioTitle: "Meeting a Coworker",
+    tier: "easy",
+    themeTags: ["work", "coworker", "intro"],
+    trackType: "core",
+    required: true,
+    objective:
+      "First-day office scenario. Greet a coworker, exchange names, and ask basic work-role small talk with no ambiguity.",
+    coreWords: ["trabajo ___", "soy ___", "¿en qué trabajas?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿eres Martín? Soy Laura.",
+        translation: "Hi, are you Martin? I am Laura.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Laura", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Sí, mucho gusto. Yo soy Martín.",
+        translation: "Yes, nice to meet you. I am Martin.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Martín", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "¿Qué tal tu mañana?",
+        translation: "How is your morning going?",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿qué tal ___?", exerciseAnchorText: "qué tal tu mañana", translation: "how is ___?", type: "core" }],
+      },
+      {
+        text: "Bien, gracias. Bastante tranquila hoy.",
+        translation: "Good, thanks. Pretty calm today.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", type: "core" }],
+      },
+      {
+        text: "Genial. Yo trabajo en ventas, ¿y tú en qué trabajas?",
+        translation: "Great. I work in sales, and you, what do you work in?",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "trabajo ___", exerciseAnchorText: "trabajo en ventas", translation: "I work ___", type: "core" },
+          { text: "¿en qué trabajas?", translation: "what do you work in?", type: "core" },
+        ],
+      },
+      {
+        text: "Trabajo en soporte. Mucho gusto, Laura. Nos vemos en la reunión.",
+        translation: "I work in support. Nice to meet you, Laura. See you at the meeting.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo ___", exerciseAnchorText: "trabajo en soporte", translation: "I work ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coworker-02-placeholder",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Coworker (Medium)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-meeting-coworker",
+    scenarioTitle: "Meeting a Coworker",
+    tier: "medium",
+    themeTags: ["work", "coworker"],
+    difficultyProfile: {
+      unknownWordTarget: 8,
+      speechSpeed: "normal",
+      ambiguity: "medium",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Coworker introduction (medium). Same first-day meeting with role details, routine, and one mild ambiguity that gets clarified.",
+    coreWords: ["hola", "soy ___", "llevo ___", "cada ___", "¿te refieres a ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, soy Laura; hoy me sumo a ventas.",
+        translation: "Hi, I am Laura; today I am joining sales.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", type: "core" }],
+      },
+      {
+        text: "Mucho gusto, Laura. Soy Martín, del equipo de soporte interno.",
+        translation: "Nice to meet you, Laura. I am Martin, from the internal support team.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Martín", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Genial, yo llevo cuentas de pymes y arranco temprano casi todos los días.",
+        translation: "Great, I handle small-business accounts and start early almost every day.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "cada ___", exerciseAnchorText: "cada día", translation: "every ___", type: "core" }],
+      },
+      {
+        text: "Perdón, ¿interno como tickets de la oficina o también clientes?",
+        translation: "Sorry, by internal do you mean office tickets or clients too?",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a tickets de la oficina", translation: "do you mean ___?", type: "core" }],
+      },
+      {
+        text: "Más de oficina, aunque a veces tocamos clientes. Dale, te muestro el piso.",
+        translation: "Mostly office tasks, although we sometimes handle clients. Great, I will show you the floor.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-coworker-03-placeholder",
+    language: "es",
+    sourceType: "core",
+    title: "Meeting a Coworker (Real)",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "Work",
+    scenarioFamily: "intro-work-meeting-coworker",
+    scenarioTitle: "Meeting a Coworker",
+    tier: "real",
+    themeTags: ["work", "coworker"],
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Coworker introduction (real). Same first-day meeting with hesitation, one unclear term, and one clarification before a natural exit.",
+    coreWords: ["hola", "soy ___", "mesa caliente", "¿te refieres a ___?", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola... eh, ¿eres Martín? Soy Laura, entro hoy a ventas.",
+        translation: "Hi... uh, are you Martin? I am Laura, I start in sales today.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", type: "core" }],
+      },
+      {
+        text: "Sí, Martín. Bienvenida. ¿Ya te ubicaron escritorio?",
+        translation: "Yes, Martin. Welcome. Have they assigned your desk yet?",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Martín", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Más o menos; me dijeron \"mesa caliente\" y me quedé medio perdida.",
+        translation: "More or less; they told me 'hot desk' and I got a bit lost.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mesa caliente", translation: "hot desk", type: "core" }],
+      },
+      {
+        text: "¿Mesa caliente... te refieres a puesto compartido? Sí, eso, creo; cada día en un escritorio distinto.",
+        translation: "Hot desk... do you mean a shared workstation? Yes, that, I think; each day at a different desk.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a puesto compartido", translation: "do you mean ___?", type: "core" }],
+      },
+      {
+        text: "Vale, te llevo; yo paso por aquí cada mañana y te presento al equipo.",
+        translation: "Great, I will take you there; I pass through here every morning and I will introduce you to the team.",
+        contextLabel: "meeting coworker",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-origin-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking Where Someone Is From",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "School",
+    scenarioFamily: "intro-school-introductions",
+    scenarioTitle: "Introducing yourself to class",
+    tier: "medium",
+    trackType: "core",
+    required: true,
+    objective:
+      "Classroom scaffold (medium). Expand the same class introduction with origin plus frequency/routine detail and one clarification.",
+    coreWords: ["soy de ___", "¿de dónde eres?", "vivo en ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿eres de esta clase también?",
+        translation: "Hi, are you in this class too?",
+        contextLabel: "asking origin",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "de esta clase", translation: "from this class", type: "core" }],
+      },
+      {
+        text: "Sí, primera semana. Soy Diego. ¿Y tú?",
+        translation: "Yeah, first week. I'm Diego. And you?",
+        contextLabel: "asking origin",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo estás?", translation: "how are you?", type: "core" }],
+      },
+      {
+        text: "Soy Elena, un poco nerviosa. Soy de Perú.",
+        translation: "I'm Elena, a bit nervous. I'm from Peru.",
+        contextLabel: "asking origin",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy de ___", exerciseAnchorText: "soy de Perú", translation: "I am from ___", type: "core" }],
+      },
+      {
+        text: "Yo vengo lunes y miércoles por la tarde. ¿Tú vienes igual?",
+        translation: "I come Mondays and Wednesdays in the afternoon. Do you come the same days?",
+        contextLabel: "asking origin",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core" }],
+      },
+      {
+        text: "Casi siempre, después del trabajo, sí.",
+        translation: "Almost always, after work, yes.",
+        contextLabel: "asking origin",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "vivo en ___", exerciseAnchorText: "vivo aquí", translation: "I live in ___", type: "core" }],
+      },
+      {
+        text: "Perdón, ¿dijiste después del trabajo o del taller? Del trabajo. Mucho gusto.",
+        translation: "Sorry, did you say after work or after the workshop? After work. Nice to meet you.",
+        contextLabel: "asking origin",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estamos igual", translation: "we're in the same situation", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-classroom-03",
+    language: "es",
+    sourceType: "core",
+    title: "Classroom Intro Conversation",
+    topic: "Introductions",
+    contextGroup: "Institutional",
+    context: "School",
+    scenarioFamily: "intro-school-introductions",
+    scenarioTitle: "Introducing yourself to class",
+    tier: "real",
+    difficultyProfile: {
+      unknownWordTarget: 14,
+      speechSpeed: "real",
+      ambiguity: "high",
+    },
+    trackType: "core",
+    required: true,
+    objective:
+      "Classroom scaffold (real). Keep the same class introduction while adding interruption, hesitation, unclear terms, and clarification.",
+    coreWords: ["buenos días", "me llamo", "soy de ___", "estudio ___", "mucho gusto"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Buenos días... ¿esta es la clase de español intermedio?",
+        translation: "Good morning... is this the intermediate Spanish class?",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "buenos días", translation: "good morning", type: "core" },
+          { text: "clase de español", translation: "Spanish class", type: "core" },
+        ],
+      },
+      {
+        text: "Sí, aquí es. Perdón, no te oí bien con el pasillo.",
+        translation: "Yes, this is it. Sorry, I didn't hear you well with the hallway noise.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "justo a tiempo", translation: "just in time", type: "core" },
+        ],
+      },
+      {
+        text: "Soy Elena, eh, me cambié de grupo esta semana.",
+        translation: "I'm Elena, uh, I switched groups this week.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy ___", exerciseAnchorText: "soy Elena", translation: "I am ___", type: "core" },
+          { text: "me llamo", translation: "my name is", type: "core" },
+        ],
+      },
+      {
+        text: "Yo soy Bruno. ¿Vienes al turno semi?",
+        translation: "I'm Bruno. Do you come to the semi shift?",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+      },
+      {
+        text: "¿Semi, como semipresencial? Sí, mitad aula, mitad online... bueno, eso nos dijeron.",
+        translation: "Semi, as in hybrid? Yes, half in class, half online... well, that's what they told us.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "soy de ___", exerciseAnchorText: "soy de Quito", translation: "I am from ___", type: "core" },
+          { text: "estudio ___", exerciseAnchorText: "estudio aquí", translation: "I study ___", type: "core" },
+        ],
+      },
+      {
+        text: "Perfecto, entonces nos veremos lunes y jueves; yo salgo del trabajo y llego corriendo.",
+        translation: "Perfect, then we'll see each other Monday and Thursday; I leave work and arrive running.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "apuntes", translation: "notes", type: "core" }],
+      },
+      {
+        text: "Mucho gusto... espera, ya empezó la profesora.",
+        translation: "Nice to meet you... wait, the teacher already started.",
+        contextLabel: "classroom introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "gracias", translation: "thanks", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-small-talk-01",
+    language: "es",
+    sourceType: "core",
+    title: "Small Talk After Greeting",
+    topic: "Introductions",
+    contextGroup: "Social Spaces",
+    context: "Park",
+    scenarioFamily: "intro-park-invited-game",
+    scenarioTitle: "Invited to join a game",
+    tier: "easy",
+    trackType: "core",
+    required: true,
+    objective:
+      "Park entry (easy). Begin the same invited-game scenario with greeting, clear name exchange, and simple no-ambiguity small talk.",
+    coreWords: ["¿cómo estás?", "estoy ___", "¿tienes tiempo ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, ¿juegas aquí en el parque?",
+        translation: "Hi, do you play here in the park?",
+        contextLabel: "small talk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "hola", translation: "hi", type: "core" }],
+      },
+      {
+        text: "Sí, juego aquí seguido. Soy Lara.",
+        translation: "Yeah, I play here often. I'm Lara.",
+        contextLabel: "small talk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "soy ___", exerciseAnchorText: "soy Lara", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Mucho gusto, Lara. Soy Nico. ¿Cómo estás hoy?",
+        translation: "Nice to meet you, Lara. I'm Nico. How are you today?",
+        contextLabel: "small talk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cómo estás?", translation: "how are you?", type: "core" }],
+      },
+      {
+        text: "Estoy bien, gracias. ¿Y tú?",
+        translation: "I'm good, thanks. And you?",
+        contextLabel: "small talk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy bien", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "También bien. ¿Tienes tiempo para una partida corta?",
+        translation: "Also good. Do you have time for a short game?",
+        contextLabel: "small talk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tienes tiempo ___?", exerciseAnchorText: "tienes tiempo para una partida", translation: "do you have time ___?", type: "core" }],
+      },
+      {
+        text: "Sí, claro. Jugamos diez minutos.",
+        translation: "Yes, of course. We can play for ten minutes.",
+        contextLabel: "small talk",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "claro", translation: "of course", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-intro-clarification-skill-01",
+    language: "es",
+    sourceType: "core",
+    title: "Clarification Basics",
+    topic: "Introductions",
+    scenarioFamily: "intro-clarification",
+    skill: "clarification",
+    trackType: "core",
+    required: true,
+    objective:
+      "Foundational clarification skill. Handle not understanding in short, practical conversation.",
+    coreWords: ["no entiendo", "¿puedes repetir?", "más despacio", "por favor", "¿qué significa ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "No entiendo.",
+        translation: "I don't understand.",
+        contextLabel: "clarification basics",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "no entiendo", translation: "I don't understand", type: "core" }],
+      },
+      {
+        text: "¿Puedes repetir más despacio, por favor?",
+        translation: "Can you repeat more slowly, please?",
+        contextLabel: "clarification basics",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [
+          { text: "¿puedes repetir?", translation: "can you repeat?", type: "core" },
+          { text: "más despacio", translation: "more slowly", type: "core" },
+          { text: "por favor", translation: "please", type: "core" },
+        ],
+      },
+      {
+        text: "Sí, claro. Quiero decir la salida principal.",
+        translation: "Yes, of course. I mean the main exit.",
+        contextLabel: "clarification basics",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero decir ___", exerciseAnchorText: "quiero decir la salida principal", translation: "I mean ___", type: "core" }],
+      },
+      {
+        text: "¿Qué significa salida?",
+        translation: "What does salida mean?",
+        contextLabel: "clarification basics",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿qué significa ___?", exerciseAnchorText: "qué significa salida", translation: "what does ___ mean?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-breakfast-01",
+    language: "es",
+    sourceType: "core",
+    title: "Ordering Breakfast",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "Cafe breakfast scenario. Place a simple order and ask for available drink options.",
+    coreWords: ["quiero ___", "¿tiene ___?", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Quiero un café y pan tostado.",
+        translation: "I want a coffee and toast.",
+        contextLabel: "breakfast order",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero un café", translation: "I want ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene jugo de naranja?",
+        translation: "Do you have orange juice?",
+        contextLabel: "breakfast order",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene jugo de naranja", translation: "do you have ___?", type: "core" }],
+      },
+      {
+        text: "También necesito una cuchara.",
+        translation: "I also need a spoon.",
+        contextLabel: "breakfast order",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito una cuchara", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-water-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking for Water",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "Restaurant table scenario. Request water and clarify preference in short practical lines.",
+    coreWords: ["necesito ___", "¿tiene ___?", "quiero ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Necesito agua, por favor.",
+        translation: "I need water, please.",
+        contextLabel: "asking for water",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito agua", translation: "I need ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene agua sin gas?",
+        translation: "Do you have still water?",
+        contextLabel: "asking for water",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene agua sin gas", translation: "do you have ___?", type: "core" }],
+      },
+      {
+        text: "Quiero un vaso grande.",
+        translation: "I want a large glass.",
+        contextLabel: "asking for water",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero un vaso grande", translation: "I want ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-bill-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking for the Bill",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "End-of-meal scenario. Ask for the total and request the bill naturally.",
+    coreWords: ["¿cuánto cuesta ___?", "quiero ___", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "La comida está muy bien.",
+        translation: "The food is very good.",
+        contextLabel: "asking for bill",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está ___", exerciseAnchorText: "está muy bien", translation: "it is ___", type: "core" }],
+      },
+      {
+        text: "¿Cuánto cuesta todo?",
+        translation: "How much does everything cost?",
+        contextLabel: "asking for bill",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cuánto cuesta ___?", exerciseAnchorText: "cuesta todo", translation: "how much does ___ cost?", type: "core" }],
+      },
+      {
+        text: "Quiero la cuenta, por favor.",
+        translation: "I want the bill, please.",
+        contextLabel: "asking for bill",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero la cuenta", translation: "I want ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-takeout-01",
+    language: "es",
+    sourceType: "core",
+    title: "Takeout Order",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "Takeout counter scenario. Place a to-go order and request needed items.",
+    coreWords: ["quiero ___", "¿tiene ___?", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Quiero una sopa para llevar.",
+        translation: "I want a soup to go.",
+        contextLabel: "takeout order",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero una sopa", translation: "I want ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene cubiertos?",
+        translation: "Do you have utensils?",
+        contextLabel: "takeout order",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene cubiertos", translation: "do you have ___?", type: "core" }],
+      },
+      {
+        text: "Necesito una bolsa.",
+        translation: "I need a bag.",
+        contextLabel: "takeout order",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito una bolsa", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-food-order-issue-01",
+    language: "es",
+    sourceType: "core",
+    title: "Order Problem",
+    topic: "Ordering Food",
+    trackType: "core",
+    required: true,
+    objective:
+      "Restaurant correction scenario. Explain an order issue and ask for the right item.",
+    coreWords: ["estoy ___", "busco ___", "¿tiene ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Perdón, estoy confundido con mi orden.",
+        translation: "Sorry, I am confused about my order.",
+        contextLabel: "order issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy confundido", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Busco mi ensalada, no está aquí.",
+        translation: "I am looking for my salad, it is not here.",
+        contextLabel: "order issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco mi ensalada", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene la orden correcta?",
+        translation: "Do you have the correct order?",
+        contextLabel: "order issue",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene la orden correcta", translation: "do you have ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-bathroom-01",
+    language: "es",
+    sourceType: "core",
+    title: "Finding the Bathroom",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Public-space navigation scenario. Ask where the bathroom is and clarify where to go.",
+    coreWords: ["¿dónde está ___?", "busco ___", "está ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Disculpe, ¿dónde está el baño?",
+        translation: "Excuse me, where is the bathroom?",
+        contextLabel: "asking directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está el baño", translation: "where is ___?", type: "core" }],
+      },
+      {
+        text: "Busco el baño de mujeres.",
+        translation: "I am looking for the women's bathroom.",
+        contextLabel: "asking directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco el baño de mujeres", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Está cerca?",
+        translation: "Is it close?",
+        contextLabel: "asking directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está ___", exerciseAnchorText: "está cerca", translation: "it is ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-station-01",
+    language: "es",
+    sourceType: "core",
+    title: "Finding the Train Station",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Travel navigation scenario. Ask for station directions and confirm entry point details.",
+    coreWords: ["¿dónde está ___?", "busco ___", "está ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Perdón, ¿dónde está la estación de tren?",
+        translation: "Sorry, where is the train station?",
+        contextLabel: "finding station",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está la estación de tren", translation: "where is ___?", type: "core" }],
+      },
+      {
+        text: "Busco la entrada principal.",
+        translation: "I am looking for the main entrance.",
+        contextLabel: "finding station",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco la entrada principal", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Está lejos?",
+        translation: "Is it far?",
+        contextLabel: "finding station",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está ___", exerciseAnchorText: "está lejos", translation: "it is ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-left-right-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking Left or Right",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Street-corner navigation. Ask where a place is and clarify left/right movement.",
+    coreWords: ["¿dónde está ___?", "necesito ___", "está ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "¿Dónde está el banco?",
+        translation: "Where is the bank?",
+        contextLabel: "left right directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está el banco", translation: "where is ___?", type: "core" }],
+      },
+      {
+        text: "¿Está a la izquierda o a la derecha?",
+        translation: "Is it to the left or to the right?",
+        contextLabel: "left right directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está ___", exerciseAnchorText: "está a la izquierda", translation: "it is ___", type: "core" }],
+      },
+      {
+        text: "Necesito llegar rápido.",
+        translation: "I need to get there quickly.",
+        contextLabel: "left right directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito llegar rápido", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-near-far-01",
+    language: "es",
+    sourceType: "core",
+    title: "Near or Far",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "City navigation scenario. Ask whether a place is near or far and compare transport cost.",
+    coreWords: ["busco ___", "está ___", "¿cuánto cuesta ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Busco una farmacia.",
+        translation: "I am looking for a pharmacy.",
+        contextLabel: "near far directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco una farmacia", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Está cerca o lejos?",
+        translation: "Is it near or far?",
+        contextLabel: "near far directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está ___", exerciseAnchorText: "está cerca", translation: "it is ___", type: "core" }],
+      },
+      {
+        text: "¿Cuánto cuesta un taxi hasta allí?",
+        translation: "How much does a taxi cost to there?",
+        contextLabel: "near far directions",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cuánto cuesta ___?", exerciseAnchorText: "cuesta un taxi", translation: "how much does ___ cost?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-directions-confirm-location-01",
+    language: "es",
+    sourceType: "core",
+    title: "Confirming a Location",
+    topic: "Directions",
+    trackType: "core",
+    required: true,
+    objective:
+      "Final confirmation scenario. Confirm the place and ask for exact entrance direction.",
+    coreWords: ["¿dónde está ___?", "necesito ___", "está ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "La biblioteca está aquí, ¿verdad?",
+        translation: "The library is here, right?",
+        contextLabel: "confirming location",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "está ___", exerciseAnchorText: "está aquí", translation: "it is ___", type: "core" }],
+      },
+      {
+        text: "Entonces, ¿dónde está la entrada?",
+        translation: "So, where is the entrance?",
+        contextLabel: "confirming location",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está la entrada", translation: "where is ___?", type: "core" }],
+      },
+      {
+        text: "Necesito confirmar la dirección.",
+        translation: "I need to confirm the address.",
+        contextLabel: "confirming location",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito confirmar la dirección", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-price-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking the Price",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "Store browsing scenario. Ask price details and decide whether to buy.",
+    coreWords: ["busco ___", "¿cuánto cuesta ___?", "quiero ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Busco una camisa azul.",
+        translation: "I am looking for a blue shirt.",
+        contextLabel: "shopping price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco una camisa azul", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Cuánto cuesta esta camisa?",
+        translation: "How much does this shirt cost?",
+        contextLabel: "shopping price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cuánto cuesta ___?", exerciseAnchorText: "cuesta esta camisa", translation: "how much does ___ cost?", type: "core" }],
+      },
+      {
+        text: "Quiero pagar con tarjeta.",
+        translation: "I want to pay by card.",
+        contextLabel: "shopping price",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero pagar con tarjeta", translation: "I want ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-find-item-01",
+    language: "es",
+    sourceType: "core",
+    title: "Looking for an Item",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "In-store help scenario. Ask for a specific item and check availability quickly.",
+    coreWords: ["busco ___", "¿tiene ___?", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, busco zapatos deportivos.",
+        translation: "Hi, I am looking for sports shoes.",
+        contextLabel: "shopping find item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco zapatos deportivos", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene talla cuarenta?",
+        translation: "Do you have size forty?",
+        contextLabel: "shopping find item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene talla cuarenta", translation: "do you have ___?", type: "core" }],
+      },
+      {
+        text: "Necesito un modelo cómodo.",
+        translation: "I need a comfortable model.",
+        contextLabel: "shopping find item",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito un modelo cómodo", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-size-color-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking for Size and Color",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "Clothing store scenario. Ask for another size/color and request to try an item.",
+    coreWords: ["busco ___", "¿tiene ___?", "quiero ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Busco esta chaqueta en negro.",
+        translation: "I am looking for this jacket in black.",
+        contextLabel: "shopping size color",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco esta chaqueta en negro", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene una talla más grande?",
+        translation: "Do you have a larger size?",
+        contextLabel: "shopping size color",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene una talla más grande", translation: "do you have ___?", type: "core" }],
+      },
+      {
+        text: "Quiero probarla.",
+        translation: "I want to try it on.",
+        contextLabel: "shopping size color",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero probarla", translation: "I want ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-paying-01",
+    language: "es",
+    sourceType: "core",
+    title: "Paying at the Register",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "Checkout scenario. Confirm total cost and complete payment with short practical phrases.",
+    coreWords: ["quiero ___", "¿cuánto cuesta ___?", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Quiero comprar estos audífonos.",
+        translation: "I want to buy these headphones.",
+        contextLabel: "shopping checkout",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero comprar estos audífonos", translation: "I want ___", type: "core" }],
+      },
+      {
+        text: "¿Cuánto cuesta el total?",
+        translation: "How much is the total?",
+        contextLabel: "shopping checkout",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cuánto cuesta ___?", exerciseAnchorText: "cuesta el total", translation: "how much does ___ cost?", type: "core" }],
+      },
+      {
+        text: "Necesito pagar ahora.",
+        translation: "I need to pay now.",
+        contextLabel: "shopping checkout",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito pagar ahora", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-shopping-return-01",
+    language: "es",
+    sourceType: "core",
+    title: "Returning or Exchanging",
+    topic: "Shopping",
+    trackType: "core",
+    required: true,
+    objective:
+      "Post-purchase service desk scenario. Report a return issue and ask for exchange options.",
+    coreWords: ["perdí ___", "busco ___", "¿tiene ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Perdí el recibo de esta compra.",
+        translation: "I lost the receipt for this purchase.",
+        contextLabel: "shopping return exchange",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "perdí ___", exerciseAnchorText: "perdí el recibo", translation: "I lost ___", type: "core" }],
+      },
+      {
+        text: "Busco cambiar esta camiseta.",
+        translation: "I am looking to exchange this shirt.",
+        contextLabel: "shopping return exchange",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco cambiar esta camiseta", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene la misma en otra talla?",
+        translation: "Do you have the same one in another size?",
+        contextLabel: "shopping return exchange",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene la misma en otra talla", translation: "do you have ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-checkin-01",
+    language: "es",
+    sourceType: "core",
+    title: "Hotel Check-in",
+    topic: "Hotel",
+    trackType: "core",
+    required: true,
+    objective:
+      "Front-desk arrival scenario. Confirm reservation and request a room with practical travel phrases.",
+    coreWords: ["tengo una reserva", "estoy ___", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, tengo una reserva para hoy.",
+        translation: "Hi, I have a reservation for today.",
+        contextLabel: "hotel check-in",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "tengo una reserva", translation: "I have a reservation", type: "core" }],
+      },
+      {
+        text: "Estoy aquí para registrarme.",
+        translation: "I am here to check in.",
+        contextLabel: "hotel check-in",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy aquí", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Necesito una habitación tranquila.",
+        translation: "I need a quiet room.",
+        contextLabel: "hotel check-in",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito una habitación tranquila", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-key-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking for a Key",
+    topic: "Hotel",
+    trackType: "core",
+    required: true,
+    objective:
+      "Hotel desk follow-up. Ask for a replacement key and confirm identity details briefly.",
+    coreWords: ["perdí ___", "necesito ___", "¿tiene ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Perdón, perdí mi llave.",
+        translation: "Sorry, I lost my key.",
+        contextLabel: "hotel key request",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "perdí ___", exerciseAnchorText: "perdí mi llave", translation: "I lost ___", type: "core" }],
+      },
+      {
+        text: "Necesito otra llave, por favor.",
+        translation: "I need another key, please.",
+        contextLabel: "hotel key request",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito otra llave", translation: "I need ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene mi documento listo?",
+        translation: "Do you have my document ready?",
+        contextLabel: "hotel key request",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene mi documento listo", translation: "do you have ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-room-problem-01",
+    language: "es",
+    sourceType: "core",
+    title: "Room Problem",
+    topic: "Hotel",
+    trackType: "core",
+    required: true,
+    objective:
+      "Guest support scenario. Explain a room problem and ask for a room change in concise speech.",
+    coreWords: ["estoy ___", "me siento ___", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Estoy en la habitación doscientos cuatro.",
+        translation: "I am in room two hundred four.",
+        contextLabel: "hotel room problem",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy en la habitación", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Me siento incómodo por el ruido.",
+        translation: "I feel uncomfortable because of the noise.",
+        contextLabel: "hotel room problem",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me siento ___", exerciseAnchorText: "me siento incómodo", translation: "I feel ___", type: "core" }],
+      },
+      {
+        text: "Necesito cambiar de habitación.",
+        translation: "I need to change rooms.",
+        contextLabel: "hotel room problem",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito cambiar de habitación", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-wifi-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking for Wi-Fi",
+    topic: "Hotel",
+    trackType: "core",
+    required: true,
+    objective:
+      "Travel-work scenario. Ask for Wi-Fi details and confirm room internet access.",
+    coreWords: ["busco ___", "¿tiene ___?", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, busco la clave de wifi.",
+        translation: "Hi, I am looking for the Wi-Fi password.",
+        contextLabel: "hotel wifi",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco la clave de wifi", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene internet en la habitación?",
+        translation: "Do you have internet in the room?",
+        contextLabel: "hotel wifi",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene internet en la habitación", translation: "do you have ___?", type: "core" }],
+      },
+      {
+        text: "Necesito conexión para trabajar.",
+        translation: "I need connection to work.",
+        contextLabel: "hotel wifi",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito conexión para trabajar", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hotel-checkout-01",
+    language: "es",
+    sourceType: "core",
+    title: "Hotel Checkout",
+    topic: "Hotel",
+    trackType: "core",
+    required: true,
+    objective:
+      "Departure desk scenario. Complete checkout, ask total cost, and request invoice support.",
+    coreWords: ["quiero ___", "¿cuánto cuesta ___?", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Hola, quiero hacer el check-out.",
+        translation: "Hi, I want to check out.",
+        contextLabel: "hotel checkout",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero hacer el check-out", translation: "I want ___", type: "core" }],
+      },
+      {
+        text: "¿Cuánto cuesta el total?",
+        translation: "How much is the total?",
+        contextLabel: "hotel checkout",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿cuánto cuesta ___?", exerciseAnchorText: "cuesta el total", translation: "how much does ___ cost?", type: "core" }],
+      },
+      {
+        text: "Necesito una factura.",
+        translation: "I need an invoice.",
+        contextLabel: "hotel checkout",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito una factura", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-feeling-sick-01",
+    language: "es",
+    sourceType: "core",
+    title: "Feeling Sick",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Urgent health support scenario. Explain how you feel and ask for nearby medical help.",
+    coreWords: ["me siento ___", "necesito ___", "¿dónde está ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Me siento mal desde esta mañana.",
+        translation: "I feel sick since this morning.",
+        contextLabel: "emergency health",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me siento ___", exerciseAnchorText: "me siento mal", translation: "I feel ___", type: "core" }],
+      },
+      {
+        text: "Necesito ayuda médica.",
+        translation: "I need medical help.",
+        contextLabel: "emergency health",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito ayuda médica", translation: "I need ___", type: "core" }],
+      },
+      {
+        text: "¿Dónde está la clínica más cercana?",
+        translation: "Where is the nearest clinic?",
+        contextLabel: "emergency health",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está la clínica más cercana", translation: "where is ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-lost-phone-01",
+    language: "es",
+    sourceType: "core",
+    title: "Lost Phone",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Public transport emergency scenario. Report a lost phone and ask where to get official help.",
+    coreWords: ["perdí ___", "busco ___", "¿dónde está ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Perdí mi teléfono en el bus.",
+        translation: "I lost my phone on the bus.",
+        contextLabel: "lost phone help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "perdí ___", exerciseAnchorText: "perdí mi teléfono", translation: "I lost ___", type: "core" }],
+      },
+      {
+        text: "Busco ayuda para bloquearlo.",
+        translation: "I am looking for help to block it.",
+        contextLabel: "lost phone help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco ayuda", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Dónde está la comisaría?",
+        translation: "Where is the police station?",
+        contextLabel: "lost phone help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está la comisaría", translation: "where is ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-police-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking for Police Help",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Street emergency scenario. Ask for immediate help and locate police support quickly.",
+    coreWords: ["necesito ___", "¿dónde está ___?", "estoy ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Necesito ayuda ahora.",
+        translation: "I need help now.",
+        contextLabel: "police help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito ayuda", translation: "I need ___", type: "core" }],
+      },
+      {
+        text: "¿Dónde está la policía?",
+        translation: "Where is the police?",
+        contextLabel: "police help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "dónde está la policía", translation: "where is ___?", type: "core" }],
+      },
+      {
+        text: "Estoy muy nervioso.",
+        translation: "I am very nervous.",
+        contextLabel: "police help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy muy nervioso", translation: "I am ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-doctor-01",
+    language: "es",
+    sourceType: "core",
+    title: "Needing a Doctor",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Medical support scenario. Describe symptoms briefly and request doctor contact information.",
+    coreWords: ["me siento ___", "necesito ___", "¿tiene ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Me siento débil.",
+        translation: "I feel weak.",
+        contextLabel: "doctor request",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "me siento ___", exerciseAnchorText: "me siento débil", translation: "I feel ___", type: "core" }],
+      },
+      {
+        text: "Necesito un doctor.",
+        translation: "I need a doctor.",
+        contextLabel: "doctor request",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito un doctor", translation: "I need ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene un número de emergencia?",
+        translation: "Do you have an emergency number?",
+        contextLabel: "doctor request",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene un número de emergencia", translation: "do you have ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-help-dont-understand-01",
+    language: "es",
+    sourceType: "core",
+    title: "I Don't Understand",
+    topic: "Emergencies & Help",
+    trackType: "core",
+    required: true,
+    objective:
+      "Communication breakdown scenario. Ask for slower support and repeat help requests politely.",
+    coreWords: ["no entiendo ___", "necesito ___", "¿puede ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "No entiendo esta información.",
+        translation: "I do not understand this information.",
+        contextLabel: "communication help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "no entiendo ___", exerciseAnchorText: "no entiendo esta información", translation: "I do not understand ___", type: "core" }],
+      },
+      {
+        text: "Necesito ayuda, por favor.",
+        translation: "I need help, please.",
+        contextLabel: "communication help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito ayuda", translation: "I need ___", type: "core" }],
+      },
+      {
+        text: "¿Puede hablar más despacio?",
+        translation: "Can you speak more slowly?",
+        contextLabel: "communication help",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿puede ___?", exerciseAnchorText: "puede hablar más despacio", translation: "can you ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-work-talk-01",
+    language: "es",
+    sourceType: "core",
+    title: "Talking About Work",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "Workday conversation scenario. Share where you work and ask about someone else's role.",
+    coreWords: ["trabajo ___", "estoy ___", "¿en qué trabajas?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Trabajo en una oficina pequeña.",
+        translation: "I work in a small office.",
+        contextLabel: "talking about work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo ___", exerciseAnchorText: "trabajo en una oficina pequeña", translation: "I work ___", type: "core" }],
+      },
+      {
+        text: "Estoy en el turno de mañana.",
+        translation: "I am on the morning shift.",
+        contextLabel: "talking about work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy en el turno de mañana", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "¿En qué trabajas tú?",
+        translation: "What do you work in?",
+        contextLabel: "talking about work",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿en qué trabajas?", translation: "what do you work in?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-work-schedule-ask-01",
+    language: "es",
+    sourceType: "core",
+    title: "Asking About Schedule",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "Shift-planning scenario. Ask about work schedule and request a shift change clearly.",
+    coreWords: ["trabajo ___", "busco ___", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Yo trabajo mañana por la tarde.",
+        translation: "I work tomorrow in the afternoon.",
+        contextLabel: "schedule planning",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo ___", exerciseAnchorText: "trabajo mañana por la tarde", translation: "I work ___", type: "core" }],
+      },
+      {
+        text: "Busco mi horario de esta semana.",
+        translation: "I am looking for my schedule this week.",
+        contextLabel: "schedule planning",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco mi horario", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "Necesito cambiar un turno.",
+        translation: "I need to change a shift.",
+        contextLabel: "schedule planning",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito cambiar un turno", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hobby-free-time-01",
+    language: "es",
+    sourceType: "core",
+    title: "Free Time",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "Leisure planning scenario. Talk about free time and discuss practice plans with simple chunks.",
+    coreWords: ["busco ___", "estoy ___", "quiero ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "En mi tiempo libre, busco clases de baile.",
+        translation: "In my free time, I look for dance classes.",
+        contextLabel: "free time",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco clases de baile", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "Estoy libre el sábado.",
+        translation: "I am free on Saturday.",
+        contextLabel: "free time",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy libre", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Quiero practicar más.",
+        translation: "I want to practice more.",
+        contextLabel: "free time",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "quiero ___", exerciseAnchorText: "quiero practicar más", translation: "I want ___", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-hobby-intro-01",
+    language: "es",
+    sourceType: "core",
+    title: "Hobby Introduction",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "New-group introduction scenario. Share work and hobby interests while asking about class options.",
+    coreWords: ["trabajo ___", "busco ___", "¿tiene ___?"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Trabajo en casa y pinto por hobby.",
+        translation: "I work at home and paint as a hobby.",
+        contextLabel: "hobby introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo ___", exerciseAnchorText: "trabajo en casa", translation: "I work ___", type: "core" }],
+      },
+      {
+        text: "Busco un grupo de arte.",
+        translation: "I am looking for an art group.",
+        contextLabel: "hobby introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "busco ___", exerciseAnchorText: "busco un grupo de arte", translation: "I am looking for ___", type: "core" }],
+      },
+      {
+        text: "¿Tiene clases los fines de semana?",
+        translation: "Do you have classes on weekends?",
+        contextLabel: "hobby introduction",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "¿tiene ___?", exerciseAnchorText: "tiene clases los fines de semana", translation: "do you have ___?", type: "core" }],
+      },
+    ],
+  },
+  {
+    id: "es-work-tired-busy-01",
+    language: "es",
+    sourceType: "core",
+    title: "Tired and Busy",
+    topic: "Job & Hobbies",
+    trackType: "core",
+    required: true,
+    objective:
+      "End-of-day conversation. Describe being busy and tired, then express immediate rest needs.",
+    coreWords: ["trabajo ___", "estoy ___", "necesito ___"],
+    interestWords: [],
+    sentences: [
+      {
+        text: "Trabajo todo el día.",
+        translation: "I work all day.",
+        contextLabel: "tired busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "trabajo ___", exerciseAnchorText: "trabajo todo el día", translation: "I work ___", type: "core" }],
+      },
+      {
+        text: "Estoy cansado pero motivado.",
+        translation: "I am tired but motivated.",
+        contextLabel: "tired busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "estoy ___", exerciseAnchorText: "estoy cansado", translation: "I am ___", type: "core" }],
+      },
+      {
+        text: "Necesito descansar esta noche.",
+        translation: "I need to rest tonight.",
+        contextLabel: "tired busy",
+        audioPlaceholder: "[Audio coming soon]",
+        words: [{ text: "necesito ___", exerciseAnchorText: "necesito descansar esta noche", translation: "I need ___", type: "core" }],
+      },
+    ],
+  },
+];
+
+const rawLessons: RawLesson[] = [
+  ...STATIC_RAW_LESSONS,
+  ...(GENERATED_LESSONS as RawLesson[]),
+];
+
+const PART_OF_SPEECH_OVERRIDES: Record<string, LessonPartOfSpeech> = {
+  "quiero": "verb",
+  "es": "verb",
+  "me trae": "phrase",
+  "mi pasaporte": "noun",
+  "la habitacion": "noun",
+  "y tu": "pronoun",
+  "yo soy": "pronoun",
+  "soy de": "preposition",
+  "vivo en": "verb",
+  "trabajo en": "verb",
+  "a la izquierda": "preposition",
+  "donde esta": "phrase",
+  "como llego": "phrase",
+  "trabajo como": "verb",
+  "en mi tiempo libre": "preposition",
+  "ya hochu": "verb",
+  "tú": "pronoun",
+  "usted": "pronoun",
+  "ты": "pronoun",
+  "вы": "pronoun",
+  "y usted": "pronoun",
+  "mne": "pronoun",
+  "pozhaluysta": "other",
+  "spasibo": "other",
+};
+
+const IMAGEABILITY_OVERRIDES: Record<string, LessonImageability> = {
+  "por favor": "low",
+  "es": "low",
+  "y tu": "low",
+  "y usted": "low",
+  "tú": "low",
+  "usted": "low",
+  "ты": "low",
+  "вы": "low",
+  "yo soy": "low",
+  "soy de": "low",
+  "de siete a diez": "low",
+  "a que hora": "low",
+  "como llego": "medium",
+  "siga recto": "medium",
+  "gire a la derecha": "medium",
+  "a la izquierda": "medium",
+  "donde esta": "medium",
+  "en mi tiempo libre": "low",
+  "los fines de semana": "low",
+  "ya hochu": "medium",
+  "pozhaluysta": "low",
+  "mne": "low",
+};
+
+const REPETITION_PRIORITY_OVERRIDES: Record<string, LessonRepetitionPriority> = {
+  "por favor": "high",
+  "quiero": "high",
+  "me trae": "high",
+  "la cuenta": "high",
+  "el menu": "high",
+  "para mi": "high",
+  "tengo una reserva": "high",
+  "a nombre de": "high",
+  "mi pasaporte": "high",
+  "la habitacion": "high",
+  "me llamo": "high",
+  "mucho gusto": "high",
+  "soy de": "high",
+  "y tu": "high",
+  "y usted": "high",
+  "tú": "high",
+  "usted": "high",
+  "ты": "high",
+  "вы": "high",
+  "donde esta": "high",
+  "como llego": "high",
+  "siga recto": "high",
+  "gire a la derecha": "high",
+  "a la izquierda": "high",
+  "en que trabajas": "high",
+  "trabajo como": "high",
+  "me gusta": "high",
+  "en mi tiempo libre": "high",
+  "ya hochu": "high",
+  "mne": "high",
+  "menyu": "high",
+  "schet": "high",
+  "pozhaluysta": "high",
+  "spasibo": "high",
+};
+
+const NOUN_HINTS = [
+  "menu",
+  "mesa",
+  "sopa",
+  "pollo",
+  "agua",
+  "salsa",
+  "cuenta",
+  "pasaporte",
+  "habitacion",
+  "llave",
+  "desayuno",
+  "escuela",
+  "oficina",
+  "fotografia",
+  "semaforo",
+  "esquina",
+  "programacion",
+  "senderismo",
+  "stolik",
+  "sup",
+  "kuritsu",
+  "schet",
+];
+
+function normalizeChunkKey(text: string): string {
+  return text.toLowerCase().trim();
+}
+
+function inferPartOfSpeech(word: RawLessonWord): LessonPartOfSpeech {
+  if (word.type === "person-name") {
+    return "noun";
+  }
+  const key = normalizeChunkKey(word.text);
+  if (PART_OF_SPEECH_OVERRIDES[key]) {
+    return PART_OF_SPEECH_OVERRIDES[key];
+  }
+  if (key.includes(" ") || key.includes(",")) {
+    return "phrase";
+  }
+  if (NOUN_HINTS.some((hint) => key.includes(hint))) {
+    return "noun";
+  }
+  return "other";
+}
+
+function inferImageability(word: RawLessonWord): LessonImageability {
+  const key = normalizeChunkKey(word.text);
+  if (IMAGEABILITY_OVERRIDES[key]) {
+    return IMAGEABILITY_OVERRIDES[key];
+  }
+  if (word.type === "person-name") {
+    return "low";
+  }
+  if (NOUN_HINTS.some((hint) => key.includes(hint))) {
+    return "high";
+  }
+  if (word.type === "interest") {
+    return "high";
+  }
+  return "medium";
+}
+
+function inferRepetitionPriority(
+  word: RawLessonWord,
+  lesson: RawLesson
+): LessonRepetitionPriority {
+  if (word.type === "person-name") {
+    return "low";
+  }
+  const key = normalizeChunkKey(word.text);
+  if (REPETITION_PRIORITY_OVERRIDES[key]) {
+    return REPETITION_PRIORITY_OVERRIDES[key];
+  }
+  if (lesson.coreWords.some((core) => normalizeChunkKey(core) === key)) {
+    return "high";
+  }
+  if (word.type === "core") {
+    return "medium";
+  }
+  return "low";
+}
+
+function enrichWord(word: RawLessonWord, lesson: RawLesson, sentenceText: string): LessonWord {
+  const detectedType: LessonWordType =
+    word.type === "person-name" ||
+    isLikelyPersonNameChunk({
+      text: word.text,
+      translation: word.translation,
+      sentenceText,
+      language: lesson.language,
+    })
+      ? "person-name"
+      : word.type;
+  const typedWord: RawLessonWord = {
+    ...word,
+    type: detectedType,
+  };
+  const partOfSpeech = typedWord.partOfSpeech ?? inferPartOfSpeech(typedWord);
+  const imageability = typedWord.imageability ?? inferImageability(typedWord);
+  const repetitionPriority = typedWord.repetitionPriority ?? inferRepetitionPriority(typedWord, lesson);
+  const image = imageability === "low" ? undefined : word.image;
+  const formality = word.formality ?? "neutral";
+  const gender = word.gender ?? "none";
+
+  return {
+    ...typedWord,
+    formality,
+    gender,
+    partOfSpeech,
+    imageability,
+    repetitionPriority,
+    image,
+  };
+}
+
+export const lessons: Lesson[] = rawLessons.map((lesson) => {
+  const continuation = buildContinuationFieldsForLesson(lesson);
+  return {
+    ...lesson,
+    ...continuation,
+    sourceType: lesson.sourceType ?? "core",
+    trackType: lesson.trackType ?? "core",
+    required: lesson.required ?? true,
+    coreWords: normalizeCoreWordsList(lesson.coreWords, {
+      language: lesson.language === "ru" ? "ru" : "es",
+    }).filter(
+      (coreChunk) =>
+        !isLikelyPersonNameChunk({
+          text: coreChunk,
+          language: lesson.language,
+        })
+    ),
+    interestWords: normalizeCoreWordsList(lesson.interestWords, {
+      language: lesson.language === "ru" ? "ru" : "es",
+    }),
+    sentences: lesson.sentences.map((sentence) => ({
+      ...sentence,
+      formality: sentence.formality ?? "neutral",
+      words: sentence.words.map((word) => {
+        const normalized = processLessonWordChunk(sentence.text, word, {
+          id: lesson.id,
+          language: lesson.language === "ru" ? "ru" : "es",
+        });
+        return enrichWord({ ...word, ...normalized }, lesson, sentence.text);
+      }),
+    })),
+  };
+});
