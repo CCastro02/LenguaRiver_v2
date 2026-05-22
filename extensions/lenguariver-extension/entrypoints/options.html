@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="wxt.open_in_tab" content="true" />
+    <title>LenguaRiver — Options</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #0f172a;
+          color: #f8fafc;
+        }
+      }
+      .wrap {
+        max-width: 420px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 16px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+      }
+      select,
+      input[type="range"] {
+        font: inherit;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        select,
+        input[type="range"] {
+          background: #1e293b;
+          border-color: #334155;
+          color: inherit;
+        }
+      }
+      .hint {
+        font-size: 0.85rem;
+        font-weight: 400;
+        color: #64748b;
+        margin: 8px 0 0;
+      }
+      .hint.warn {
+        color: #b45309;
+      }
+      @media (prefers-color-scheme: dark) {
+        .hint.warn {
+          color: #fbbf24;
+        }
+      }
+      .status {
+        font-size: 0.9rem;
+        margin: 12px 0 0;
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>LenguaRiver</h1>
+      <form id="form" autocomplete="off">
+        <label>
+          Language of highlighted text
+          <select id="sourceLanguage" name="sourceLanguage"></select>
+        </label>
+        <label>
+          Translate/explain saved words into
+          <select id="targetLanguage" name="targetLanguage"></select>
+        </label>
+        <p class="hint">
+          Example: if you save Spanish words and want English meanings, choose English.
+        </p>
+        <p id="sameLanguageWarning" class="hint warn" hidden>
+          Saved words may translate into the same language.
+        </p>
+        <label>
+          TTS rate: <span id="ttsRateValue">1.0</span>×
+          <input id="ttsRate" type="range" min="0.5" max="2" step="0.1" />
+        </label>
+        <p class="hint">
+          Stored locally in <code>chrome.storage.local</code> only. Each saved word stores the language of the
+          highlighted text and the language to translate or explain it into.
+        </p>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script type="module" src="./options/main.ts"></script>
+  </body>
+</html>

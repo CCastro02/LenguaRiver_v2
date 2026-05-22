@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LenguaRiver — Saved words</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        font-size: 13px;
+        line-height: 1.35;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color: #f1f5f9;
+          background: #0f172a;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        width: 360px;
+        max-height: 520px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        padding: 10px 12px 6px;
+        border-bottom: 1px solid #e2e8f0;
+        flex-shrink: 0;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .header {
+          border-color: #1e293b;
+        }
+      }
+
+      .header h1 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .search-wrap {
+        position: relative;
+      }
+
+      .search-wrap input {
+        width: 100%;
+        padding: 7px 10px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        font: inherit;
+        background: #fff;
+      }
+
+      .popup-actions {
+        margin-top: 8px;
+      }
+
+      .popup-actions button {
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        width: 100%;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .popup-actions button {
+          border-color: #475569;
+          background: #0f172a;
+          color: #e2e8f0;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .search-wrap input {
+          border-color: #334155;
+          background: #1e293b;
+          color: inherit;
+        }
+      }
+
+      main {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .list-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 8px 12px;
+        min-height: 120px;
+      }
+
+      .empty {
+        padding: 24px 16px;
+        text-align: center;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .empty {
+          color: #94a3b8;
+        }
+      }
+
+      .row {
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .row {
+          background: #1e293b;
+          border-color: #334155;
+        }
+      }
+
+      .row-text {
+        margin: 0 0 6px;
+        font-weight: 600;
+        word-break: break-word;
+      }
+
+      .row-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        font-size: 11px;
+        color: #64748b;
+        margin-bottom: 8px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .row-meta {
+          color: #94a3b8;
+        }
+      }
+
+      .row-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .row-actions button {
+        font: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 9px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .row-actions button {
+          border-color: #475569;
+          background: #0f172a;
+          color: #e2e8f0;
+        }
+      }
+
+      .row-actions button.danger:hover {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .row-actions button.danger:hover {
+          background: #450a0a;
+          border-color: #7f1d1d;
+        }
+      }
+
+      .footnote {
+        padding: 0 12px 8px;
+        font-size: 10px;
+        color: #94a3b8;
+      }
+
+      .toast {
+        min-height: 1.25em;
+        padding: 0 12px 8px;
+        font-size: 11px;
+        color: #b91c1c;
+      }
+
+      .muted {
+        color: #64748b;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .muted {
+          color: #94a3b8;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>Saved words</h1>
+      <div class="search-wrap">
+        <input
+          type="search"
+          id="search"
+          autocomplete="off"
+          placeholder="Search text, language, domain…"
+          aria-label="Filter saved words"
+        />
+      </div>
+      <div class="popup-actions">
+        <button type="button" id="export-json" aria-label="Download saved words as JSON file">
+          Export JSON
+        </button>
+      </div>
+    </header>
+    <main>
+      <div class="list-scroll" id="list" aria-live="polite"></div>
+      <p class="empty" id="empty-state">
+        No saved words yet. Highlight text on a page and click Save.
+      </p>
+    </main>
+    <div class="footnote muted" id="hint"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./popup/main.ts"></script>
+  </body>
+</html>
