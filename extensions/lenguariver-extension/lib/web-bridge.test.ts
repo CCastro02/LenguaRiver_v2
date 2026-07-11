@@ -8,6 +8,7 @@ import {
   getLenguaRiverOriginFromUrl,
   isLenguaRiverWebUrl,
   LOCAL_DEV_LENGUARIVER_ORIGINS,
+  PRODUCTION_LENGUARIVER_ORIGINS,
   PRODUCTION_LENGUARIVER_ORIGIN_PLACEHOLDERS,
 } from "./web-bridge";
 
@@ -17,9 +18,15 @@ for (const origin of LOCAL_DEV_LENGUARIVER_ORIGINS) {
   assert.ok(allowed.has(origin), `local dev origin should be allowed: ${origin}`);
 }
 
+for (const origin of PRODUCTION_LENGUARIVER_ORIGINS) {
+  assert.ok(allowed.has(origin), `production origin should be allowed: ${origin}`);
+}
+
 assert.equal(isLenguaRiverWebUrl("http://localhost:3000/my-words"), true);
 assert.equal(isLenguaRiverWebUrl("http://localhost:3001/my-words"), true);
+assert.equal(isLenguaRiverWebUrl("https://lengua-river.vercel.app/my-words"), true);
 assert.equal(getLenguaRiverOriginFromUrl("http://localhost:3000/explore"), "http://localhost:3000");
+assert.equal(getLenguaRiverOriginFromUrl("https://lengua-river.vercel.app/explore"), "https://lengua-river.vercel.app");
 
 for (const placeholder of PRODUCTION_LENGUARIVER_ORIGIN_PLACEHOLDERS) {
   assert.equal(

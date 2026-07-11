@@ -16,19 +16,10 @@ export const LOCAL_DEV_LENGUARIVER_ORIGINS = [
   "http://localhost:3001",
 ] as const;
 
-/**
- * Production web origins — uncomment and replace placeholders with real URLs before release.
- *
- * - Vercel: use your deployment origin (see `NEXT_PUBLIC_SITE_URL` in PROJECT_RULES.md).
- *   Example shape: `https://<your-vercel-domain>.vercel.app`
- * - Custom domain: `https://lenguariver.com` when live.
- *
- * No concrete Vercel URL is committed in this repo; do not guess — configure here when known.
- */
-// export const PRODUCTION_LENGUARIVER_ORIGINS = [
-//   "https://<your-vercel-domain>.vercel.app",
-//   "https://lenguariver.com",
-// ] as const;
+/** Production web origins allowed for extension ↔ web app auto-sync. */
+export const PRODUCTION_LENGUARIVER_ORIGINS = [
+  "https://lengua-river.vercel.app",
+] as const;
 
 /** Documented production targets; inactive until added to `ALLOWED_LENGUARIVER_ORIGINS` above. */
 export const PRODUCTION_LENGUARIVER_ORIGIN_PLACEHOLDERS = [
@@ -38,8 +29,7 @@ export const PRODUCTION_LENGUARIVER_ORIGIN_PLACEHOLDERS = [
 
 const ALLOWED_LENGUARIVER_ORIGINS = new Set<string>([
   ...LOCAL_DEV_LENGUARIVER_ORIGINS,
-  // When enabling production sync, spread uncommented PRODUCTION_LENGUARIVER_ORIGINS here:
-  // ...PRODUCTION_LENGUARIVER_ORIGINS,
+  ...PRODUCTION_LENGUARIVER_ORIGINS,
 ]);
 
 /** Active allowlist (for tests and diagnostics). */
