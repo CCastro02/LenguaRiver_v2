@@ -55,6 +55,7 @@ export const GENERATED_LESSONS = [
         "words": [
           {
             "text": "quiero ___",
+            "exerciseAnchorText": "Quiero café y pan",
             "translation": "quiero ___",
             "type": "interest"
           }
@@ -67,8 +68,8 @@ export const GENERATED_LESSONS = [
         "audioPlaceholder": "[Audio coming soon]",
         "words": [
           {
-            "text": "¿tiene ___?",
-            "translation": "¿tiene ___?",
+            "text": "claro",
+            "translation": "of course",
             "type": "interest"
           }
         ]
@@ -81,6 +82,7 @@ export const GENERATED_LESSONS = [
         "words": [
           {
             "text": "¿tiene ___?",
+            "exerciseAnchorText": "¿Tiene efectivo",
             "translation": "¿tiene ___?",
             "type": "interest"
           }
@@ -140,6 +142,7 @@ export const GENERATED_LESSONS = [
         "words": [
           {
             "text": "quiero ___",
+            "exerciseAnchorText": "Quiero café y pan",
             "translation": "quiero ___",
             "type": "interest"
           }
@@ -152,8 +155,8 @@ export const GENERATED_LESSONS = [
         "audioPlaceholder": "[Audio coming soon]",
         "words": [
           {
-            "text": "¿tiene ___?",
-            "translation": "¿tiene ___?",
+            "text": "claro",
+            "translation": "of course",
             "type": "interest"
           }
         ]
@@ -166,6 +169,7 @@ export const GENERATED_LESSONS = [
         "words": [
           {
             "text": "¿tiene ___?",
+            "exerciseAnchorText": "¿Tiene efectivo",
             "translation": "¿tiene ___?",
             "type": "interest"
           }

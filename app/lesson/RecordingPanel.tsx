@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { isBrowserSpeechRecognitionSupported, useSpeechRecognition } from "./useSpeechRecognition";
 import {
   classifyToken,
@@ -53,6 +53,68 @@ function isMediaRecordingSupported(): boolean {
 
 const isDev = process.env.NODE_ENV === "development";
 
+function clientMountedSubscribe(): () => void {
+  return () => {};
+}
+
+function clientMountedSnapshot(): boolean {
+  return true;
+}
+
+function serverMountedSnapshot(): boolean {
+  return false;
+}
+
+type CompactLearnerStatus =
+  | "Not tried"
+  | "Listening…"
+  | "Good"
+  | "Try again"
+  | "Mic unavailable";
+
+function compactStatusDataAttribute(
+  status: CompactLearnerStatus
+): "not-tried" | "listening" | "good" | "try-again" | "mic-unavailable" {
+  switch (status) {
+    case "Listening…":
+      return "listening";
+    case "Good":
+      return "good";
+    case "Try again":
+      return "try-again";
+    case "Mic unavailable":
+      return "mic-unavailable";
+    default:
+      return "not-tried";
+  }
+}
+
+function compactLearnerStatusLabel(input: {
+  micError: string | null;
+  browserStt: boolean;
+  mediaRecordingSupported: boolean;
+  isRecordingAudio: boolean;
+  isTranscribing: boolean;
+  complete: boolean;
+  isCorrect: boolean | null;
+  noSpeechMessage: string | null;
+  sttFallbackActive: boolean;
+}): CompactLearnerStatus {
+  if (input.micError || (!input.browserStt && !input.mediaRecordingSupported)) {
+    return "Mic unavailable";
+  }
+  if (input.isRecordingAudio || input.isTranscribing) {
+    return "Listening…";
+  }
+  if (input.complete || input.isCorrect === true) {
+    return "Good";
+  }
+  if (input.isCorrect === false || input.noSpeechMessage || input.sttFallbackActive) {
+    return "Try again";
+  }
+  return "Not tried";
+}
+
 function deferSpeechFollowup(work: () => void): void {
   window.setTimeout(work, 0);
 }
@@ -96,6 +158,8 @@ type LocalTranscriptionResponse =
     };
 
 export type RecordingPanelProps = {
+  /** Compact buttons for comic bubble action rows (no instruction label). */
+  variant?: "default" | "compact";
   expectedText: string;
   /**
    * For translation/meaning exercises: all accepted spoken answers (e.g. ["hello", "hi", "hey"]).
@@ -126,6 +190,7 @@ export type RecordingPanelProps = {
 };
 
 export function RecordingPanel({
+  variant = "default",
   expectedText,
   acceptedSpokenTexts,
   language,
@@ -139,6 +204,7 @@ export function RecordingPanel({
   interactionDisabled = false,
   notifyOnFailure = false,
 }: RecordingPanelProps) {
+  const isCompact = variant === "compact";
   const sttLang = sttLangFromLessonLanguage(language);
   const {
     startListening,
@@ -181,17 +247,43 @@ export function RecordingPanel({
   const lastScoredMatchPercentRef = useRef<number | null>(null);
   const lastCheckResultRef = useRef<SpeechCheckResult | null>(null);
   const parentNotificationStatusRef = useRef<ParentNotificationStatus>(null);
+  const hasMounted = useSyncExternalStore(
+    clientMountedSubscribe,
+    clientMountedSnapshot,
+    serverMountedSnapshot
+  );
 
   const displayTranscript = whisperTranscript.trim() || transcript.trim() || lastTranscript;
-  const browserStt = isBrowserSpeechRecognitionSupported() && isSupported;
+  const browserStt =
+    hasMounted && isBrowserSpeechRecognitionSupported() && isSupported;
+  const mediaRecordingSupported = hasMounted && isMediaRecordingSupported();
   const shouldShowNetworkFallback =
     recognitionError === "network" && !isTranscribing && !whisperTranscript.trim();
   const showSttTypedFallbackPanel =
     shouldShowNetworkFallback || Boolean(audioWithoutSttMessage);
   const sttFallbackGuidanceText =
     shouldShowNetworkFallback ? STT_NETWORK_FALLBACK_MSG : audioWithoutSttMessage;
+  const compactStatus = isCompact
+    ? hasMounted
+      ? compactLearnerStatusLabel({
+          micError,
+          browserStt,
+          mediaRecordingSupported,
+          isRecordingAudio,
+          isTranscribing,
+          complete,
+          isCorrect,
+          noSpeechMessage,
+          sttFallbackActive: showSttTypedFallbackPanel,
+        })
+      : "Not tried"
+    : null;
 
   useEffect(() => {
+    if (isCompact) {
+      hasAnnouncedTypingFallbackRef.current = false;
+      return;
+    }
     if (!showSttTypedFallbackPanel) {
       hasAnnouncedTypingFallbackRef.current = false;
       return;
@@ -201,7 +293,7 @@ export function RecordingPanel({
     }
     hasAnnouncedTypingFallbackRef.current = true;
     onTypingFallbackNeeded?.();
-  }, [onTypingFallbackNeeded, showSttTypedFallbackPanel]);
+  }, [isCompact, onTypingFallbackNeeded, showSttTypedFallbackPanel]);
 
   useEffect(() => {
     recordedUrlForCleanupRef.current = recordedAudioUrl;
@@ -731,7 +823,7 @@ export function RecordingPanel({
   }, [clearTranscript, clearRecognitionError]);
 
   const isShadow = mode === "shadow";
-  const label = isShadow ? (
+  const label = isCompact ? null : isShadow ? (
     <p className="muted" style={{ marginBottom: "0.35rem" }}>
       Repeat this sentence out loud. Stop recording when finished.
     </p>
@@ -741,6 +833,8 @@ export function RecordingPanel({
       {answerInstruction ?? "Speak your answer out loud, then stop or press Check."}
     </p>
   );
+
+  const buttonClass = isCompact ? "lr-comic-btn lr-comic-btn--speak" : "button";
 
   /** Exposure: swap primary control — idle → Start speaking, recording → Stop speaking, after match → Practice again */
   const shadowShowsPracticeAgain = Boolean(complete || isCorrect === true);
@@ -757,87 +851,162 @@ export function RecordingPanel({
   const stopButtonLabel = isShadow ? "⏹ Stop speaking" : "⏹ Stop recording";
   const stopAriaLabel = isShadow ? "Stop speaking" : "Stop recording";
 
+  const compactShowsStopRecording = Boolean(isRecordingAudio && !isTranscribing);
+  const compactShowsPracticeAgain =
+    isShadow && (complete || isCorrect === true) && !compactShowsStopRecording && !isTranscribing;
+  const compactSpeakLabel =
+    isCorrect === false && !complete ? "🎙 Try again" : "🎙 Speak";
+  const compactSpeakAriaLabel =
+    isCorrect === false && !complete ? "Try again" : isShadow ? "Start speaking" : startAriaLabel;
+
+  const compactRecordButton = isCompact ? (
+    !isTranscribing ? (
+      compactShowsStopRecording ? (
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={onStop}
+          disabled={interactionDisabled}
+          aria-label={stopAriaLabel}
+        >
+          ■ Stop
+        </button>
+      ) : compactShowsPracticeAgain || !isShadow ? (
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={() => {
+            void onStart();
+          }}
+          disabled={interactionDisabled || isRecordingAudio || isTranscribing}
+          aria-label={compactShowsPracticeAgain ? "Practice again" : compactSpeakAriaLabel}
+        >
+          {compactSpeakLabel}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={() => {
+            void onStart();
+          }}
+          disabled={interactionDisabled || isRecordingAudio || isTranscribing}
+          aria-label="Start speaking"
+        >
+          🎙 Speak
+        </button>
+      )
+    ) : null
+  ) : null;
+
+  const defaultRecordButtons = isShadow ? (
+    !isTranscribing ? (
+      shadowShowsStopRecording ? (
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={onStop}
+          disabled={interactionDisabled}
+          aria-label={stopAriaLabel}
+        >
+          {stopButtonLabel}
+        </button>
+      ) : shadowShowsPracticeAgain ? (
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={() => {
+            void onStart();
+          }}
+          disabled={interactionDisabled || isRecordingAudio || isTranscribing}
+          aria-label="Practice again"
+        >
+          🎙️ Practice again
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={() => {
+            void onStart();
+          }}
+          disabled={interactionDisabled || isRecordingAudio || isTranscribing}
+          aria-label="Start speaking"
+        >
+          🎙️ Start speaking
+        </button>
+      )
+    ) : null
+  ) : (
+    <>
+      <button
+        type="button"
+        className={buttonClass}
+        onClick={() => {
+          void onStart();
+        }}
+        disabled={interactionDisabled || isRecordingAudio || isTranscribing}
+        aria-label={startAriaLabel}
+      >
+        {startButtonLabel}
+      </button>
+      <button
+        type="button"
+        className={buttonClass}
+        onClick={onStop}
+        disabled={interactionDisabled || !isRecordingAudio}
+        aria-label={stopAriaLabel}
+      >
+        {stopButtonLabel}
+      </button>
+      <button
+        type="button"
+        className="button"
+        onClick={onManualCheck}
+        disabled={
+          interactionDisabled ||
+          isRecordingAudio ||
+          isTranscribing ||
+          (!displayTranscript.trim() && !sttTypedFallback.trim())
+        }
+      >
+        Check
+      </button>
+    </>
+  );
+
+  const showCompactStatus = isCompact && compactStatus != null;
+
   return (
-    <div className="lr-recording-panel" style={{ marginTop: "0.5rem" }}>
+    <div
+      className={
+        isCompact
+          ? "lr-recording-panel lr-recording-panel--compact recording-panel"
+          : "lr-recording-panel recording-panel"
+      }
+      style={isCompact ? undefined : { marginTop: "0.5rem" }}
+    >
       {label}
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-        {isShadow ? (
-          !isTranscribing ? (
-            shadowShowsStopRecording ? (
-              <button
-                type="button"
-                className="button"
-                onClick={onStop}
-                disabled={interactionDisabled}
-                aria-label={stopAriaLabel}
-              >
-                {stopButtonLabel}
-              </button>
-            ) : shadowShowsPracticeAgain ? (
-              <button
-                type="button"
-                className="button"
-                onClick={() => {
-                  void onStart();
-                }}
-                disabled={interactionDisabled || isRecordingAudio || isTranscribing}
-                aria-label="Practice again"
-              >
-                🎙️ Practice again
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="button"
-                onClick={() => {
-                  void onStart();
-                }}
-                disabled={interactionDisabled || isRecordingAudio || isTranscribing}
-                aria-label="Start speaking"
-              >
-                🎙️ Start speaking
-              </button>
-            )
-          ) : null
-        ) : (
-          <>
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                void onStart();
-              }}
-              disabled={interactionDisabled || isRecordingAudio || isTranscribing}
-              aria-label={startAriaLabel}
-            >
-              {startButtonLabel}
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={onStop}
-              disabled={interactionDisabled || !isRecordingAudio}
-              aria-label={stopAriaLabel}
-            >
-              {stopButtonLabel}
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={onManualCheck}
-              disabled={
-                interactionDisabled ||
-                isRecordingAudio ||
-                isTranscribing ||
-                (!displayTranscript.trim() && !sttTypedFallback.trim())
-              }
-            >
-              Check
-            </button>
-          </>
-        )}
+      <div
+        className={isCompact ? "lr-comic-bubble__record-actions" : undefined}
+        style={
+          isCompact
+            ? undefined
+            : { display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }
+        }
+      >
+        {isCompact ? compactRecordButton : defaultRecordButtons}
       </div>
-      {isDev ? (
+      {showCompactStatus ? (
+        <p
+          className="lr-comic-recording-status"
+          data-status={compactStatusDataAttribute(compactStatus)}
+          aria-live="polite"
+        >
+          {compactStatus === "Good" ? "✓ Good" : compactStatus}
+        </p>
+      ) : null}
+      {isDev && !isCompact ? (
         <div
           className="muted"
           style={{
@@ -847,27 +1016,27 @@ export function RecordingPanel({
             lineHeight: 1.45,
           }}
         >
-          <div>Speech recognition supported: {browserStt ? "yes" : "no"}</div>
+          <div>Speech recognition supported: {hasMounted && browserStt ? "yes" : "no"}</div>
           <div>Last transcript: {transcript.trim() ? transcript.trim() : "(empty)"}</div>
           <div>Last recognition error: {recognitionError ?? "(none)"}</div>
         </div>
       ) : null}
-      {micError ? (
+      {!isCompact && micError ? (
         <p className="feedback-incorrect" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
           {micError}
         </p>
       ) : null}
-      {isTranscribing ? (
+      {!isCompact && isTranscribing ? (
         <p className="muted" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
           Transcribing...
         </p>
       ) : null}
-      {noSpeechMessage ? (
+      {!isCompact && noSpeechMessage ? (
         <p className="feedback-incorrect" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
           {noSpeechMessage}
         </p>
       ) : null}
-      {showSttTypedFallbackPanel ? (
+      {!isCompact && showSttTypedFallbackPanel ? (
         <div style={{ marginTop: "0.35rem" }}>
           {sttFallbackGuidanceText ? (
             <p className="muted" style={{ marginBottom: "0.35rem" }}>
@@ -917,15 +1086,15 @@ export function RecordingPanel({
           </div>
         </div>
       ) : null}
-      {!interactionDisabled && complete && isCorrect === false ? (
+      {!isCompact && !interactionDisabled && complete && isCorrect === false ? (
         <p className="muted" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
           Step already counted complete — practicing again won’t undo your progress.
         </p>
       ) : null}
-      {(isCorrect === true || complete) ? (
+      {!isCompact && (isShadow ? complete : isCorrect === true || complete) ? (
         <div style={{ marginTop: "0.35rem" }}>
           <p className="feedback-correct" style={{ marginBottom: isShadow ? "0.25rem" : 0 }}>
-            Correct — sentence complete
+            {isShadow ? "Correct — sentence complete" : "Good pronunciation"}
           </p>
           {isShadow ? (
             <p className="muted" style={{ marginTop: 0, marginBottom: 0 }}>
@@ -934,7 +1103,7 @@ export function RecordingPanel({
           ) : null}
         </div>
       ) : null}
-      {recordedAudioUrl ? (
+      {!isCompact && recordedAudioUrl ? (
         <div style={{ marginTop: "0.5rem" }}>
           <p className="muted" style={{ marginBottom: "0.25rem" }}>
             Replay your recording
@@ -942,12 +1111,12 @@ export function RecordingPanel({
           <audio controls src={recordedAudioUrl} style={{ maxWidth: "100%", display: "block" }} />
         </div>
       ) : null}
-      {displayTranscript ? (
+      {!isCompact && displayTranscript ? (
         <p className="muted" style={{ marginTop: "0.35rem" }}>
           Transcript: {displayTranscript}
         </p>
       ) : null}
-      {isCorrect !== null ? (
+      {!isCompact && isCorrect !== null ? (
         <div className="muted" style={{ marginTop: "0.35rem" }}>
           <p style={{ marginBottom: "0.25rem" }}>
             <strong>Expected:</strong> {expectedText}
@@ -975,7 +1144,7 @@ export function RecordingPanel({
           ) : null}
         </div>
       ) : null}
-      {isCorrect === false ? (
+      {!isCompact && isCorrect === false ? (
         <>
           <p className="feedback-incorrect">❌ Try again</p>
           {missingWords.length > 0 ? (

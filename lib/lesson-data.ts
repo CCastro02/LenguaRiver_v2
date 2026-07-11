@@ -233,6 +233,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
             type: "core",
             gender: "feminine",
             genderNote: "la sopa = feminine noun phrase",
+            image: "/images/chunks/sopa.png",
           },
           {
             text: "el pollo",
@@ -240,6 +241,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
             type: "core",
             gender: "masculine",
             genderNote: "el pollo = masculine noun phrase",
+            image: "/images/chunks/pollo.png",
           },
           {
             text: "sin cebolla",
@@ -256,8 +258,8 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "para mi", translation: "for me", type: "core" },
           { text: "quiero", translation: "I want", type: "core" },
-          { text: "arroz", translation: "rice", type: "core" },
-          { text: "agua", translation: "water", type: "core" },
+          { text: "arroz", translation: "rice", type: "core", image: "/images/chunks/arroz.png" },
+          { text: "agua", translation: "water", type: "core", image: "/images/chunks/agua.png" },
           {
             text: "por favor",
             translation: "please",
@@ -271,7 +273,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Is the sauce spicy?",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "la salsa", translation: "the sauce", type: "core" },
+          { text: "la salsa", translation: "the sauce", type: "core", image: "/images/chunks/salsa.png" },
           { text: "es", translation: "is", type: "core" },
           { text: "picante", translation: "spicy", type: "interest", image: "/images/chunks/picante.png" },
         ],
@@ -316,7 +318,12 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         audioPlaceholder: "[Audio coming soon]",
         words: [
           { text: "buenas noches", translation: "good evening", type: "core" },
-          { text: "tengo una reserva", translation: "I have a reservation", type: "core" },
+          {
+            text: "tengo una reserva",
+            translation: "I have a reservation",
+            type: "core",
+            image: "/images/chunks/reserva.png",
+          },
           { text: "a nombre de", translation: "under the name of", type: "core" },
           { text: "Rivera", translation: "Rivera", type: "core" },
         ],
@@ -330,7 +337,12 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "claro", translation: "of course", type: "core" },
           { text: "me muestra", translation: "can you show me", type: "core" },
-          { text: "mi pasaporte", translation: "my passport", type: "core" },
+          {
+            text: "mi pasaporte",
+            translation: "my passport",
+            type: "core",
+            image: "/images/chunks/pasaporte.png",
+          },
           {
             text: "por favor",
             translation: "please",
@@ -345,9 +357,25 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         audioPlaceholder: "[Audio coming soon]",
         words: [
           { text: "aqui esta", translation: "here is", type: "core" },
-          { text: "mi pasaporte", translation: "my passport", type: "core" },
-          { text: "la habitacion", translation: "the room", type: "core" },
-          { text: "con vista", translation: "with a view", type: "interest", interestTopic: "travel" },
+          {
+            text: "mi pasaporte",
+            translation: "my passport",
+            type: "core",
+            image: "/images/chunks/pasaporte.png",
+          },
+          {
+            text: "la habitacion",
+            translation: "the room",
+            type: "core",
+            image: "/images/chunks/habitacion.png",
+          },
+          {
+            text: "con vista",
+            translation: "with a view",
+            type: "interest",
+            interestTopic: "travel",
+            image: "/images/chunks/vista.png",
+          },
         ],
       },
       {
@@ -363,13 +391,21 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
             type: "core",
             formality: "formal",
             contextLabel: "staff / customer",
+            image: "/images/chunks/habitacion.png",
           },
-          { text: "con vista", translation: "with a view", type: "interest", interestTopic: "travel" },
+          {
+            text: "con vista",
+            translation: "with a view",
+            type: "interest",
+            interestTopic: "travel",
+            image: "/images/chunks/vista.png",
+          },
           {
             text: "desayuno incluido",
             translation: "breakfast included",
             type: "interest",
             interestTopic: "travel",
+            image: "/images/chunks/desayuno-incluido.png",
           },
         ],
       },
@@ -380,7 +416,12 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "perfecto", translation: "perfect", type: "core" },
           { text: "a que hora", translation: "at what time", type: "core" },
-          { text: "el desayuno", translation: "breakfast", type: "core" },
+          {
+            text: "el desayuno",
+            translation: "breakfast",
+            type: "core",
+            image: "/images/chunks/desayuno.png",
+          },
           {
             text: "por favor",
             translation: "please",
@@ -398,8 +439,13 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "de siete a diez", translation: "from seven to ten", type: "core" },
           { text: "aqui tiene", translation: "here you have", type: "core" },
-          { text: "la llave", translation: "the key", type: "core" },
-          { text: "la habitacion", translation: "the room", type: "core" },
+          { text: "la llave", translation: "the key", type: "core", image: "/images/chunks/llave.png" },
+          {
+            text: "la habitacion",
+            translation: "the room",
+            type: "core",
+            image: "/images/chunks/habitacion.png",
+          },
         ],
       },
     ],
@@ -464,7 +510,12 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "vivo en", translation: "I live in", type: "core" },
           { text: "trabajo en", translation: "I work at", type: "core" },
-          { text: "una escuela", translation: "a school", type: "core" },
+          {
+            text: "una escuela",
+            translation: "a school",
+            type: "core",
+            image: "/images/chunks/escuela.png",
+          },
         ],
       },
       {
@@ -474,7 +525,12 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "que bien", translation: "great", type: "core" },
           { text: "trabajo en", translation: "I work at", type: "core" },
-          { text: "una oficina", translation: "an office", type: "core" },
+          {
+            text: "una oficina",
+            translation: "an office",
+            type: "core",
+            image: "/images/chunks/oficina.png",
+          },
           { text: "ingeniera", translation: "engineer", type: "interest", interestTopic: "engineering" },
         ],
       },
@@ -521,7 +577,13 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         audioPlaceholder: "[Audio coming soon]",
         words: [
           { text: "me gusta", translation: "I like", type: "core" },
-          { text: "fotografia", translation: "photography", type: "interest", interestTopic: "travel" },
+          {
+            text: "fotografia",
+            translation: "photography",
+            type: "interest",
+            interestTopic: "travel",
+            image: "/images/chunks/fotografia.png",
+          },
           { text: "correr", translation: "to run", type: "core" },
         ],
       },
@@ -544,7 +606,12 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "perdon", translation: "excuse me", type: "core" },
           { text: "donde esta", translation: "where is", type: "core" },
-          { text: "la estacion de tren", translation: "the train station", type: "core" },
+          {
+            text: "la estacion de tren",
+            translation: "the train station",
+            type: "core",
+            image: "/images/chunks/estacion-tren.png",
+          },
         ],
       },
       {
@@ -564,7 +631,13 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "siga recto", translation: "go straight", type: "core" },
           { text: "hasta", translation: "until", type: "core" },
-          { text: "el semaforo", translation: "the traffic light", type: "interest", interestTopic: "travel" },
+          {
+            text: "el semaforo",
+            translation: "the traffic light",
+            type: "interest",
+            interestTopic: "travel",
+            image: "/images/chunks/semaforo.png",
+          },
         ],
       },
       {
@@ -574,7 +647,13 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "luego", translation: "then", type: "core" },
           { text: "gire a la derecha", translation: "turn right", type: "core" },
-          { text: "la esquina", translation: "the corner", type: "interest", interestTopic: "travel" },
+          {
+            text: "la esquina",
+            translation: "the corner",
+            type: "interest",
+            interestTopic: "travel",
+            image: "/images/chunks/esquina.png",
+          },
         ],
       },
       {
@@ -670,14 +749,14 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Where is the bathroom?",
         contextLabel: "Asking (examples)",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿dónde está el baño?", translation: "where is the bathroom?", type: "core" }],
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "¿Dónde está el baño?", translation: "where is ___?", type: "core" }],
       },
       {
         text: "¿Dónde está la calle?",
         translation: "Where is the street?",
         contextLabel: "Asking (examples)",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿dónde está la calle?", translation: "where is the street?", type: "core" }],
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "¿Dónde está la calle?", translation: "where is ___?", type: "core" }],
       },
       {
         text: "Para mí.",
@@ -1030,7 +1109,13 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         words: [
           { text: "en mi tiempo libre", translation: "in my free time", type: "core" },
           { text: "me gusta", translation: "I like", type: "core" },
-          { text: "senderismo", translation: "hiking", type: "interest", interestTopic: "fitness" },
+          {
+            text: "senderismo",
+            translation: "hiking",
+            type: "interest",
+            interestTopic: "fitness",
+            image: "/images/chunks/senderismo.png",
+          },
         ],
       },
       {
@@ -2233,7 +2318,13 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         audioPlaceholder: "[Audio coming soon]",
         words: [
           { text: "ayer", translation: "yesterday", type: "core", formality: "informal" },
-          { text: "el café", translation: "the coffee shop", type: "core", formality: "informal" },
+          {
+            text: "el café",
+            translation: "the coffee shop",
+            type: "core",
+            formality: "informal",
+            image: "/images/chunks/cafe.png",
+          },
         ],
       },
       {
@@ -2321,7 +2412,6 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
           { text: "la próxima vez", translation: "next time", type: "core", formality: "informal" },
           { text: "quiero", translation: "I want", type: "core", formality: "informal" },
           { text: "después", translation: "then / after", type: "core", formality: "informal" },
-          { text: "por favor", translation: "please", type: "core", formality: "informal" },
         ],
       },
     ],
@@ -2491,6 +2581,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "coffee shop / busy",
         audioPlaceholder: "[Audio coming soon]",
         words: [
+          { text: "Andrés", translation: "Andrés", type: "person-name", formality: "neutral" },
           { text: "media jornada", translation: "part-time", type: "interest", formality: "neutral" },
         ],
       },
@@ -2502,7 +2593,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         audioPlaceholder: "[Audio coming soon]",
         words: [
           { text: "turno partido", translation: "split shift", type: "interest", formality: "neutral" },
-          { text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a que salgo y vuelvo", translation: "do you mean ___?", type: "core", formality: "neutral" },
+          { text: "¿te refieres a ___?", exerciseAnchorText: "¿Te refieres a que voy y vuelvo?", translation: "do you mean ___?", type: "core", formality: "neutral" },
           { text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "neutral" },
         ],
       },
@@ -2542,7 +2633,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         audioPlaceholder: "[Audio coming soon]",
         words: [
           { text: "me llamo", translation: "my name is", type: "core", formality: "formal" },
-          { text: "¿cómo se llama?", translation: "what is your name (formal)", type: "core", formality: "formal" },
+          { text: "¿en qué área trabaja usted?", translation: "which area do you work in (formal)", type: "core", formality: "formal" },
         ],
       },
       {
@@ -2552,7 +2643,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "office / professional",
         contextNote: "Use se llama with usted in formal introductions.",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "trabajo aquí", translation: "I work here", type: "core", formality: "formal" }],
+        words: [{ text: "trabajo en ventas", translation: "I work in sales", type: "core", formality: "formal" }],
       },
       {
         text: "Perfecto. Yo estoy en soporte y paso por este piso casi siempre.",
@@ -2561,13 +2652,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "office / professional",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          {
-            text: "mucho gusto",
-            translation: "nice to meet you",
-            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
-            type: "core",
-            formality: "formal",
-          },
+          { text: "estoy en soporte", translation: "I'm in support", type: "core", formality: "formal" },
         ],
       },
       {
@@ -2577,9 +2662,8 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "office / professional",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "soy", translation: "I am", type: "core", formality: "formal" },
-          { text: "nueva", translation: "new", type: "core", formality: "formal" },
-          { text: "aquí", translation: "here", type: "core", formality: "formal" },
+          { text: "soporte técnico", translation: "technical support", type: "core", formality: "formal" },
+          { text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "formal" },
         ],
       },
     ],
@@ -2617,7 +2701,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "office / professional",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "me llamo", translation: "my name is", type: "core", formality: "formal" },
+          { text: "soy", translation: "I am", type: "core", formality: "formal" },
           { text: "carlos", translation: "Carlos", type: "core", formality: "formal" },
         ],
       },
@@ -2628,7 +2712,10 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "office / professional",
         contextNote: "Use se llama with usted in formal introductions.",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿cómo se llama?", translation: "what is your name (formal)", type: "core", formality: "formal" }],
+        words: [
+          { text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "formal" },
+          { text: "hago shadowing", translation: "I'm doing shadowing", type: "core", formality: "formal" },
+        ],
       },
       {
         text: "¿Shadowing? ¿Se refiere a acompañar a alguien en turno... o algo así? Sí, más o menos, voy pegada al equipo.",
@@ -2637,13 +2724,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "office / professional",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          {
-            text: "mucho gusto",
-            translation: "nice to meet you",
-            acceptedMeanings: ["nice to meet you", "pleased to meet you", "nice meeting you"],
-            type: "core",
-            formality: "formal",
-          },
+          { text: "¿se refiere a", translation: "do you mean", type: "core", formality: "formal" },
         ],
       },
       {
@@ -2652,7 +2733,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "formal",
         contextLabel: "office / professional",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "trabajo aquí", translation: "I work here", type: "core", formality: "formal" }],
+        words: [{ text: "le presento al equipo", translation: "I'll introduce you to the team", type: "core", formality: "formal" }],
       },
     ],
   },
@@ -2804,21 +2885,21 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Hi, Daniel. Yes, I am the purchasing contact; I come on Thursdays to review progress.",
         contextLabel: "meeting client",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "cada ___", exerciseAnchorText: "cada jueves", translation: "every ___", type: "core" }],
+        words: [{ text: "cada ___", exerciseAnchorText: "vengo los jueves", translation: "every ___", type: "core" }],
       },
       {
         text: "Perfecto. Yo preparo el reporte semanal y hoy traigo la versión de cierre.",
         translation: "Perfect. I prepare the weekly report and today I bring the closing version.",
         contextLabel: "meeting client",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "reviso ___", exerciseAnchorText: "reviso avances", translation: "I review ___", type: "core" }],
+        words: [{ text: "reviso ___", exerciseAnchorText: "preparo el reporte", translation: "I review ___", type: "core" }],
       },
       {
         text: "Perdón, ¿de cierre como cierre mensual o cierre de sprint?",
         translation: "Sorry, by closing do you mean monthly closing or sprint closing?",
         contextLabel: "meeting client",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a cierre mensual", translation: "do you mean ___?", type: "core" }],
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "de cierre como cierre mensual", translation: "do you mean ___?", type: "core" }],
       },
       {
         text: "De sprint, el mensual lo vemos el lunes. Si te parece, arrancamos.",
@@ -2865,7 +2946,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Yes, Daniel, from purchasing. Sorry, I arrived a bit rushed, the elevator stopped.",
         contextLabel: "meeting client",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "soy ___", exerciseAnchorText: "soy Daniel", translation: "I am ___", type: "core" }],
+        words: [{ text: "soy ___", exerciseAnchorText: "Daniel, del lado de compras", translation: "I am ___", type: "core" }],
       },
       {
         text: "Tranqui. Hoy quería revisar el handoff de pedidos y lo que quedó colgado.",
@@ -2886,7 +2967,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Great, then we review that first and leave the rest for closing, works for you?",
         contextLabel: "meeting client",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+        words: [{ text: "¿te va?", translation: "works for you?", type: "core" }],
       },
     ],
   },
@@ -3081,7 +3162,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "informal",
         contextLabel: "gym / active",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿te falta mucho?", translation: "do you need much longer?", type: "core", formality: "informal" }],
+        words: [{ text: "¿te queda mucho?", translation: "do you have much left?", type: "core", formality: "informal" }],
       },
       {
         text: "Nada, dos repeticiones y te la paso. ¿Todo bien?",
@@ -3117,7 +3198,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "informal",
         contextLabel: "gym / active",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
+        words: [{ text: "¿te refieres a", translation: "do you mean", type: "core", formality: "informal" }],
       },
       {
         text: "Por cierto, me llamo Iván.",
@@ -3125,7 +3206,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "informal",
         contextLabel: "gym / active",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core", formality: "informal" }],
+        words: [{ text: "me llamo", translation: "my name is", type: "core", formality: "informal" }],
       },
       {
         text: "Julia. Mucho gusto... va, usa la máquina.",
@@ -3273,7 +3354,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "informal",
         contextLabel: "party / casual",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "vengo con amigos", translation: "I came with friends", type: "core", formality: "informal" }],
+        words: [{ text: "vine con unos amigos", translation: "I came with some friends", type: "core", formality: "informal" }],
       },
       {
         text: "Qué bien. Me llamo Sofía, por cierto. ¿Del trabajo de oficina o de tienda?",
@@ -3357,7 +3438,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "party / noisy",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "vine con amigos", translation: "I came with friends", type: "core", formality: "informal" },
+          { text: "vine con unos amigos", translation: "I came with some friends", type: "core", formality: "informal" },
         ],
       },
       {
@@ -3366,7 +3447,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "informal",
         contextLabel: "party / noisy",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "recién entré", translation: "I just came in", type: "core", formality: "informal" }],
+        words: [{ text: "recién arrancamos", translation: "we just started", type: "core", formality: "informal" }],
       },
       {
         text: "Oye, ¿de dónde eres?",
@@ -3482,7 +3563,15 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "neutral",
         contextLabel: "restaurant / question",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "quiero agua", translation: "I want water", type: "core", formality: "neutral" }],
+        words: [
+          {
+            text: "quiero agua",
+            translation: "I want water",
+            type: "core",
+            formality: "neutral",
+            image: "/images/chunks/agua.png",
+          },
+        ],
       },
       {
         text: "Por favor.",
@@ -3528,7 +3617,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "neutral",
         contextLabel: "station / directions",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿dónde está la estación?", translation: "where is the station", type: "core", formality: "neutral" }],
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "¿Dónde está la estación?", translation: "where is ___?", type: "core", formality: "neutral" }],
       },
       {
         text: "Está cerca.",
@@ -3582,7 +3671,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "neutral",
         contextLabel: "hotel / directions",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿dónde está el hotel?", translation: "where is the hotel", type: "core", formality: "neutral" }],
+        words: [{ text: "¿dónde está ___?", exerciseAnchorText: "¿Dónde está el hotel?", translation: "where is ___?", type: "core", formality: "neutral" }],
       },
       {
         text: "Está lejos.",
@@ -3636,7 +3725,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         formality: "neutral",
         contextLabel: "store / asking price",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿cuánto cuesta esto?", translation: "how much does this cost", type: "core", formality: "neutral" }],
+        words: [{ text: "¿cuánto cuesta ___?", exerciseAnchorText: "¿Cuánto cuesta esto?", translation: "how much does ___ cost?", type: "core", formality: "neutral" }],
       },
       {
         text: "Quiero comprar esto.",
@@ -4146,7 +4235,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Nice. I head down to work early every day.",
         contextLabel: "meeting neighbor",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿cómo te está yendo?", translation: "how is it going?", type: "core" }],
+        words: [{ text: "bajo al trabajo", translation: "I head down to work", type: "core" }],
       },
       {
         text: "Bien, todavía me ubico. Acabo de llegar y vuelvo tarde casi siempre.",
@@ -4220,21 +4309,21 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Yeah, exactly... sorry, I still don't know the building intercom well.",
         contextLabel: "meeting neighbor",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "no conozco a nadie", translation: "I don't know anyone", type: "core" }],
+        words: [{ text: "no ubico bien", translation: "I don't know well yet", type: "core" }],
       },
       {
         text: "¿El portero, el timbre de la entrada o el conserje? Sí, el timbre... creo, todavía me confundo.",
         translation: "The intercom, the entrance buzzer, or the doorman? The buzzer, I think... I still get confused.",
         contextLabel: "meeting neighbor",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "mudanza", translation: "move", type: "core" }],
+        words: [{ text: "el timbre", translation: "the buzzer", type: "core" }],
       },
       {
         text: "Tranqui, pasa al principio; yo salgo temprano al trabajo y te explico si quieres.",
         translation: "No worries, that happens at first; I leave early for work and can explain if you want.",
         contextLabel: "meeting neighbor",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "me mudé hace poco", translation: "I moved recently", type: "core" }],
+        words: [{ text: "salgo temprano", translation: "I leave early", type: "core" }],
       },
       {
         text: "Te entiendo. Oye, ¿de dónde eres?",
@@ -4361,21 +4450,21 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Great, I handle small-business accounts and start early almost every day.",
         contextLabel: "meeting coworker",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "cada ___", exerciseAnchorText: "cada día", translation: "every ___", type: "core" }],
+        words: [{ text: "cada ___", exerciseAnchorText: "casi todos los días", translation: "every ___", type: "core" }],
       },
       {
         text: "Perdón, ¿interno como tickets de la oficina o también clientes?",
         translation: "Sorry, by internal do you mean office tickets or clients too?",
         contextLabel: "meeting coworker",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "te refieres a tickets de la oficina", translation: "do you mean ___?", type: "core" }],
+        words: [{ text: "¿te refieres a ___?", exerciseAnchorText: "interno como tickets", translation: "do you mean ___?", type: "core" }],
       },
       {
         text: "Más de oficina, aunque a veces tocamos clientes. Dale, te muestro el piso.",
         translation: "Mostly office tasks, although we sometimes handle clients. Great, I will show you the floor.",
         contextLabel: "meeting coworker",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+        words: [{ text: "te muestro el piso", translation: "I'll show you the floor", type: "core" }],
       },
     ],
   },
@@ -4415,7 +4504,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Yes, Martin. Welcome. Have they assigned your desk yet?",
         contextLabel: "meeting coworker",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "soy ___", exerciseAnchorText: "soy Martín", translation: "I am ___", type: "core" }],
+        words: [{ text: "soy ___", exerciseAnchorText: "Sí, Martín", translation: "I am ___", type: "core" }],
       },
       {
         text: "Más o menos; me dijeron \"mesa caliente\" y me quedé medio perdida.",
@@ -4436,7 +4525,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Great, I will take you there; I pass through here every morning and I will introduce you to the team.",
         contextLabel: "meeting coworker",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+        words: [{ text: "cada mañana", translation: "every morning", type: "core" }],
       },
     ],
   },
@@ -4470,7 +4559,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Yeah, first week. I'm Diego. And you?",
         contextLabel: "asking origin",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿cómo estás?", translation: "how are you?", type: "core" }],
+        words: [{ text: "primera semana", translation: "first week", type: "core" }],
       },
       {
         text: "Soy Elena, un poco nerviosa. Soy de Perú.",
@@ -4484,21 +4573,21 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "I come Mondays and Wednesdays in the afternoon. Do you come the same days?",
         contextLabel: "asking origin",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "¿de dónde eres?", translation: "where are you from?", type: "core" }],
+        words: [{ text: "¿tú vienes igual?", translation: "do you come the same days?", type: "core" }],
       },
       {
         text: "Casi siempre, después del trabajo, sí.",
         translation: "Almost always, after work, yes.",
         contextLabel: "asking origin",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "vivo en ___", exerciseAnchorText: "vivo aquí", translation: "I live in ___", type: "core" }],
+        words: [{ text: "después del trabajo", translation: "after work", type: "core" }],
       },
       {
         text: "Perdón, ¿dijiste después del trabajo o del taller? Del trabajo. Mucho gusto.",
         translation: "Sorry, did you say after work or after the workshop? After work. Nice to meet you.",
         contextLabel: "asking origin",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "estamos igual", translation: "we're in the same situation", type: "core" }],
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
       },
     ],
   },
@@ -4541,7 +4630,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "classroom introduction",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "justo a tiempo", translation: "just in time", type: "core" },
+          { text: "aquí es", translation: "this is it", type: "core" },
         ],
       },
       {
@@ -4550,8 +4639,8 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "classroom introduction",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "soy ___", exerciseAnchorText: "soy Elena", translation: "I am ___", type: "core" },
-          { text: "me llamo", translation: "my name is", type: "core" },
+          { text: "soy ___", exerciseAnchorText: "Soy Elena", translation: "I am ___", type: "core" },
+          { text: "me cambié de grupo", translation: "I switched groups", type: "core" },
         ],
       },
       {
@@ -4559,7 +4648,7 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "I'm Bruno. Do you come to the semi shift?",
         contextLabel: "classroom introduction",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
+        words: [{ text: "turno semi", translation: "semi shift", type: "core" }],
       },
       {
         text: "¿Semi, como semipresencial? Sí, mitad aula, mitad online... bueno, eso nos dijeron.",
@@ -4567,8 +4656,8 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         contextLabel: "classroom introduction",
         audioPlaceholder: "[Audio coming soon]",
         words: [
-          { text: "soy de ___", exerciseAnchorText: "soy de Quito", translation: "I am from ___", type: "core" },
-          { text: "estudio ___", exerciseAnchorText: "estudio aquí", translation: "I study ___", type: "core" },
+          { text: "semipresencial", translation: "hybrid / semi-presential", type: "core" },
+          { text: "mitad aula", translation: "half in class", type: "core" },
         ],
       },
       {
@@ -4576,14 +4665,14 @@ const STATIC_RAW_LESSONS: RawLesson[] = [
         translation: "Perfect, then we'll see each other Monday and Thursday; I leave work and arrive running.",
         contextLabel: "classroom introduction",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "apuntes", translation: "notes", type: "core" }],
+        words: [{ text: "nos veremos", translation: "we'll see each other", type: "core" }],
       },
       {
         text: "Mucho gusto... espera, ya empezó la profesora.",
         translation: "Nice to meet you... wait, the teacher already started.",
         contextLabel: "classroom introduction",
         audioPlaceholder: "[Audio coming soon]",
-        words: [{ text: "gracias", translation: "thanks", type: "core" }],
+        words: [{ text: "mucho gusto", translation: "nice to meet you", type: "core" }],
       },
     ],
   },
@@ -5880,6 +5969,9 @@ const NOUN_HINTS = [
   "sopa",
   "pollo",
   "agua",
+  "arroz",
+  "cafe",
+  "estacion",
   "salsa",
   "cuenta",
   "pasaporte",
@@ -5989,6 +6081,9 @@ function enrichWord(word: RawLessonWord, lesson: RawLesson, sentenceText: string
     image,
   };
 }
+
+/** Raw lesson records before chunk normalization (for `verify:lesson-chunks`). */
+export const lessonsRaw = rawLessons;
 
 export const lessons: Lesson[] = rawLessons.map((lesson) => {
   const continuation = buildContinuationFieldsForLesson(lesson);

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExploreCategory, ExploreContentItem, UserWildWord } from "@/lib/explore-content";
-import { WILD_WORDS_STORAGE_KEY } from "@/lib/explore-content";
+import { prependWildWord, WILD_WORDS_STORAGE_KEY } from "@/lib/wild-word-storage";
+import { buildLexemeKey } from "@/lib/lexeme-key";
 import { lookupWord, type WiktionaryLookupResult } from "@/lib/wiktionary";
 import { ensureTtsVoicesLoaded, speakTextWithPreferredVoice } from "@/lib/tts-voice";
 
@@ -80,6 +81,7 @@ export default function ExploreClient({ items }: { items: ExploreContentItem[] }
       id: `${item.language}-${Date.now()}`,
       language: item.language,
       text: selectedText,
+      lexemeKey: buildLexemeKey(item.language, selectedText),
       sourceItemId: item.id,
       sourceTitle: item.title,
       contextSentence: item.summary,
@@ -87,9 +89,7 @@ export default function ExploreClient({ items }: { items: ExploreContentItem[] }
       pronunciation: selectedText,
       savedAt: new Date().toISOString(),
     };
-    const raw = window.localStorage.getItem(WILD_WORDS_STORAGE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as UserWildWord[]) : [];
-    window.localStorage.setItem(WILD_WORDS_STORAGE_KEY, JSON.stringify([wildWord, ...parsed]));
+    prependWildWord(wildWord);
     setSaveMessageById((prev) => ({ ...prev, [item.id]: `Saved to "${WILD_WORDS_STORAGE_KEY}"` }));
   }
 

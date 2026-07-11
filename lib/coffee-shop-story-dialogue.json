@@ -1,0 +1,604 @@
+{
+  "easy": {
+    "scene-01-arrival.png": {
+      "layout": "three_strip",
+      "hint": "strong",
+      "busy": false,
+      "visualBeats": [
+        "arrival_establishing",
+        "arrival_notice",
+        "arrival_approach"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Hola, ¿está libre esta silla?",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Sí, claro, siéntate.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-02-greeting.png": {
+      "layout": "three_strip",
+      "hint": "strong",
+      "busy": false,
+      "visualBeats": [
+        "greeting_approach",
+        "greeting_gesture",
+        "greeting_response"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Gracias. ¿Cómo estás hoy?",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Bien, un poco cansada. ¿Y tú?",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-03-ordering.png": {
+      "layout": "three_strip",
+      "hint": "strong",
+      "busy": false,
+      "visualBeats": [
+        "ordering_setup",
+        "ordering_gesture",
+        "ordering_reaction"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Bien también. Vengo aquí antes del trabajo.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Qué bien.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-04-clarification.png": {
+      "layout": "three_strip",
+      "hint": "strong",
+      "busy": false,
+      "visualBeats": [
+        "clarify_confused",
+        "clarify_gesture",
+        "clarify_understanding"
+      ],
+      "panels": [
+        {
+          "speaker": "stranger",
+          "text": "Qué bien. Me llamo María.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "Mucho gusto, María. Yo soy Leo.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        }
+      ]
+    },
+    "scene-05-closing.png": {
+      "layout": "three_strip",
+      "hint": "strong",
+      "busy": false,
+      "visualBeats": [
+        "closing_relaxed",
+        "closing_table",
+        "closing_departure"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Mucho gusto, María.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "Yo soy Leo.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        }
+      ]
+    }
+  },
+  "medium": {
+    "scene-01-arrival.png": {
+      "layout": "three_strip",
+      "hint": "medium",
+      "busy": false,
+      "visualBeats": [
+        "arrival_establishing",
+        "arrival_notice",
+        "arrival_approach"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Hola, ¿te molesta si me siento aquí?",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "No, para nada. ¿Cómo va tu día?",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-02-greeting.png": {
+      "layout": "two_plus_one",
+      "hint": "medium",
+      "busy": false,
+      "visualBeats": [
+        "greeting_approach",
+        "greeting_gesture",
+        "greeting_response"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Eh... largo, pero bien. ¿Vienes aquí mucho?",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 10,
+            "y": 16,
+            "width": 78
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Sí, casi todos los martes.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-2",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        }
+      ]
+    },
+    "scene-03-small-talk.png": {
+      "layout": "two_plus_one",
+      "hint": "medium",
+      "busy": false,
+      "visualBeats": [
+        "ordering_setup",
+        "ordering_gesture",
+        "ordering_reaction"
+      ],
+      "panels": [
+        {
+          "speaker": "stranger",
+          "text": "Trabajo cerca, en una consultora.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-2",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "Ah, entonces trabajas en oficina.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 10,
+            "y": 16,
+            "width": 78
+          }
+        }
+      ]
+    },
+    "scene-04-clarification.png": {
+      "layout": "three_strip",
+      "hint": "medium",
+      "busy": false,
+      "visualBeats": [
+        "clarify_confused",
+        "clarify_gesture",
+        "clarify_understanding"
+      ],
+      "panels": [
+        {
+          "speaker": "stranger",
+          "text": "Bueno... no exactamente, más bien asesoría de proyectos. Me llamo Lucía.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "Yo soy Mateo.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        }
+      ]
+    },
+    "scene-05-closing.png": {
+      "layout": "three_strip",
+      "hint": "medium",
+      "busy": false,
+      "visualBeats": [
+        "closing_relaxed",
+        "closing_table",
+        "closing_departure"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Yo soy Mateo.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "Mucho gusto.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        }
+      ]
+    }
+  },
+  "real": {
+    "scene-01-arrival.png": {
+      "layout": "wide_top",
+      "hint": "light",
+      "busy": true,
+      "visualBeats": [
+        "arrival_establishing",
+        "arrival_notice",
+        "arrival_approach"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Perdón, ¿este asiento está ocupado?",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-2",
+          "placement": {
+            "x": 10,
+            "y": 16,
+            "width": 80
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "No, no, siéntate.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 10,
+            "y": 8,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Está a tope hoy, ¿no?",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 10,
+            "y": 66,
+            "width": 84
+          }
+        }
+      ]
+    },
+    "scene-02-greeting.png": {
+      "layout": "three_strip",
+      "hint": "light",
+      "busy": true,
+      "visualBeats": [
+        "greeting_approach",
+        "greeting_gesture",
+        "greeting_response"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Sí, total.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 12,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "Vine por un café rápido antes de entrar.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-2",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Yo igual, siempre corriendo.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-03-ongoing-chat.png": {
+      "layout": "three_strip",
+      "hint": "light",
+      "busy": true,
+      "visualBeats": [
+        "chat_busy",
+        "greeting_response",
+        "closing_relaxed"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Vengo del intercambiador y paro dos minutos.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Me llamo Laura, por cierto.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-04-natural-response.png": {
+      "layout": "three_strip",
+      "hint": "light",
+      "busy": false,
+      "visualBeats": [
+        "natural_exchange",
+        "clarify_gesture",
+        "clarify_understanding"
+      ],
+      "panels": [
+        {
+          "speaker": "learner",
+          "text": "Andrés.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-1",
+          "placement": {
+            "x": 8,
+            "y": 12,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "learner",
+          "text": "¿Te refieres a que voy y vuelvo?",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-left",
+          "panelSlot": "panel-2",
+          "placement": {
+            "x": 8,
+            "y": 14,
+            "width": 84
+          }
+        },
+        {
+          "speaker": "stranger",
+          "text": "Sí, algo así.",
+          "bubbleStyle": "speech",
+          "emphasis": "normal",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 6,
+            "y": 14,
+            "width": 86
+          }
+        }
+      ]
+    },
+    "scene-05-closing.png": {
+      "layout": "wide_top",
+      "hint": "light",
+      "busy": false,
+      "visualBeats": [
+        "closing_relaxed",
+        "closing_table",
+        "closing_departure"
+      ],
+      "panels": [
+        {
+          "speaker": "stranger",
+          "text": "Mucho gusto; ya llaman mi pedido.",
+          "bubbleStyle": "speech",
+          "emphasis": "strong",
+          "position": "top-right",
+          "panelSlot": "panel-3",
+          "placement": {
+            "x": 10,
+            "y": 14,
+            "width": 84
+          }
+        }
+      ]
+    }
+  }
+}

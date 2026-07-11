@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Lesson, LessonLanguage } from "@/lib/lesson-data";
 import { useProgressStore } from "@/app/progress-store";
@@ -218,8 +219,15 @@ export default function ProgressPage() {
   return (
     <AppShell>
       <div className="page">
-        <h1>My words</h1>
-        <p className="muted">Topic mastery map and a simple chunk memory snapshot.</p>
+        <h1>Progress</h1>
+        <p className="muted">
+          Topic mastery map and vocabulary you practice through Learn and Review. For Explore highlights saved in this browser,
+          open{" "}
+          <Link href="/my-words" className="db-link-ghost">
+            My Words
+          </Link>
+          .
+        </p>
 
         <section className="card lr-lesson-overview-language">
           <h2>Language</h2>

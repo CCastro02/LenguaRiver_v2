@@ -27,12 +27,17 @@ body {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 * {
@@ -71,10 +76,103 @@ a {
   letter-spacing: 0.01em;
 }
 
+.brand.brand--logo {
+  display: block;
+  line-height: 0;
+  max-width: min(220px, 55vw);
+}
+
+.brand.brand--logo .db-brand-slot--wordmark {
+  max-width: 100%;
+}
+
+/* LenguaRiverMark: next/image fill + object-fit: contain (site-header + dashboard) */
+.db-brand {
+  display: block;
+  line-height: 0;
+}
+
+.db-brand-slot--sidebar {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: min(52px, 15vw);
+  aspect-ratio: 1;
+}
+
+.db-brand-icon-img {
+  object-fit: contain;
+}
+
+.db-brand-slot--wordmark {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: min(280px, 72vw);
+  aspect-ratio: 3 / 1;
+}
+
+@media (min-width: 700px) {
+  .db-brand-slot--wordmark {
+    max-width: 280px;
+  }
+}
+
+.db-brand-wordmark-img {
+  object-fit: contain;
+}
+
+.db-brand-slot--wordmark-only,
+.db-brand-slot--monochrome {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: min(280px, 72vw);
+  aspect-ratio: 3 / 1;
+}
+
+@media (min-width: 700px) {
+  .db-brand-slot--wordmark-only,
+  .db-brand-slot--monochrome {
+    max-width: 280px;
+  }
+}
+
+.db-brand-wordmark-only-img,
+.db-brand-monochrome-img {
+  object-fit: contain;
+}
+
 .nav-links {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   font-size: 0.95rem;
+}
+
+@media (max-width: 560px) {
+  .nav {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: unset;
+    padding: 0.5rem 0;
+    gap: 0.75rem;
+  }
+
+  .nav-links {
+    gap: 0.35rem 0.75rem;
+  }
+
+  .nav-links a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.15rem;
+  }
+
+  .page h1 {
+    font-size: 1.45rem;
+  }
 }
 
 main.container {
@@ -301,4 +399,580 @@ main.container.container--dashboard {
   display: grid;
   gap: 0.35rem;
   background: var(--card);
+}
+
+/* Subtle banner when localStorage developer mode is on */
+.lr-dev-mode-active {
+  font-size: 0.8125rem;
+  opacity: 0.85;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* --- My Words (Explore wild saves) --- */
+
+.lr-my-words-header {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.lr-my-words-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lr-my-words-import-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
+.lr-my-words-import-result {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.lr-my-words-export-image-note {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.lr-my-words-export-wrap {
+  display: inline-flex;
+}
+
+.lr-my-words-enrichment-footnote {
+  margin-top: 0.55rem;
+  font-size: 0.8525rem;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.lr-my-words-pill-link {
+  flex: none;
+}
+
+@media (min-width: 640px) {
+  .lr-my-words-header {
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem 1rem;
+  }
+
+  .lr-my-words-links {
+    justify-content: flex-end;
+  }
+}
+
+.lr-my-search-label {
+  display: block;
+  font-size: 0.8125rem;
+  margin-bottom: 0.35rem;
+}
+
+.lr-my-search-input {
+  width: 100%;
+  max-width: 100%;
+}
+
+.lr-my-count {
+  margin-top: 0.65rem;
+  font-size: 0.8125rem;
+}
+
+.lr-my-words-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.65rem;
+}
+
+.lr-my-words-toolbar .lr-my-count {
+  margin-top: 0;
+  flex: 1 1 auto;
+}
+
+.lr-my-words-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.lr-word-def--card {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.lr-word-enrich-pending {
+  margin: 0.22rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.lr-word-card-refresh {
+  font-size: 0.8125rem;
+}
+
+.lr-my-words-empty {
+  text-align: left;
+  max-width: 36rem;
+  margin-inline: auto;
+  padding: 1.5rem;
+}
+
+.lr-my-words-empty-gap {
+  margin-top: 0.65rem;
+}
+
+.lr-my-words-empty-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lr-my-words-bridge-note {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.lr-my-words-bridge-sum {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.lr-my-words-bridge-note .muted {
+  margin-top: 0.5rem;
+}
+
+.lr-my-words-inline-code {
+  font-size: 0.86em;
+  font-family: ui-monospace, monospace;
+  padding: 0.06em 0.28em;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.lr-word-list {
+  list-style: none;
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+}
+
+.lr-word-card {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.lr-word-card-layout {
+  --lr-word-thumb-size: 120px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 128px);
+  gap: 0.45rem 0.75rem;
+  align-items: start;
+}
+
+.lr-word-card-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lr-word-fields--card {
+  gap: 0.42rem;
+}
+
+.lr-word-field--word {
+  gap: 0.15rem;
+}
+
+.lr-word-card-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.55rem;
+}
+
+.lr-word-card-phonetic {
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  margin-top: 0.05rem;
+}
+
+.lr-word-field--translation {
+  gap: 0.18rem;
+}
+
+.lr-word-field--definition {
+  gap: 0.16rem;
+}
+
+.lr-word-card-thumb {
+  width: var(--lr-word-thumb-size, 120px);
+  max-width: 100%;
+  justify-self: end;
+}
+
+.lr-word-thumb-frame {
+  width: var(--lr-word-thumb-size, 120px);
+  height: var(--lr-word-thumb-size, 120px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(148, 163, 184, 0.08);
+  box-sizing: border-box;
+}
+
+.lr-word-thumb-frame .lr-word-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  max-height: none;
+}
+
+.lr-word-thumb-placeholder {
+  display: grid;
+  place-items: center;
+  padding: 0.2rem;
+}
+
+.lr-word-debug-image-url-caption {
+  font-size: 0.65rem;
+  line-height: 1.25;
+  margin: 0.15rem 0 0;
+  padding: 0 0.08rem;
+  word-break: break-all;
+}
+
+.lr-word-image-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.lr-word-image-upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lr-word-card-actions--below {
+  margin-top: 0.05rem;
+}
+
+@media (max-width: 719.98px) {
+  .lr-word-card-layout {
+    --lr-word-thumb-size: 120px;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .lr-word-card-thumb {
+    width: var(--lr-word-thumb-size, 120px);
+    max-width: min(140px, 100%);
+    justify-self: start;
+    order: 3;
+  }
+
+  .lr-word-thumb-frame {
+    width: 100%;
+    max-width: 140px;
+    height: auto;
+    aspect-ratio: 1;
+    margin-inline: 0;
+  }
+
+  .lr-word-card-main {
+    order: 1;
+  }
+}
+
+.lr-word-fields {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.lr-word-field {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.lr-word-field-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: inherit;
+  opacity: 0.68;
+}
+
+.lr-word-field-value-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.lr-word-field-value-row .lr-word-card-headline {
+  flex: 1;
+  min-width: 0;
+}
+
+.lr-word-field-value-row .lr-word-card-translation {
+  flex: 1;
+  min-width: 0;
+}
+
+.lr-word-audio-btn {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
+  padding: 0.1rem 0.34rem;
+  border-radius: 6px;
+}
+
+.lr-word-audio-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lr-word-field-value {
+  font-size: 0.945rem;
+  line-height: 1.42;
+}
+
+.lr-word-card-translation {
+  font-size: 1.02rem;
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.lr-word-lang-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.lr-word-lang-note {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.lr-word-placeholder {
+  font-style: italic;
+}
+
+.lr-word-src-id {
+  display: block;
+  font-size: 0.825rem;
+  margin-top: 0.22rem;
+}
+
+.lr-word-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.lr-word-card-text {
+  font-size: 1.38rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.lr-lang-pill {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: inherit;
+}
+
+.lr-lang-pill--compact {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.06rem 0.38rem;
+  opacity: 0.88;
+}
+
+.lr-word-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.lr-word-card-remove {
+  background: transparent;
+  border-style: dashed;
+}
+
+.lr-word-quote {
+  font-style: italic;
+  font-size: 0.88rem;
+  margin: 0;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border);
+}
+
+.lr-word-field--context .lr-word-quote {
+  margin-top: 0.1rem;
+  max-width: min(42em, 100%);
+}
+
+.lr-context-hit {
+  font-weight: 700;
+  font-style: inherit;
+  color: var(--foreground);
+  opacity: 0.95;
+}
+
+.lr-word-card-details {
+  grid-column: 1 / -1;
+  margin-top: 0.05rem;
+  width: 100%;
+  min-width: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(127, 127, 127, 0.04);
+  padding: 0.28rem 0.45rem 0.45rem;
+}
+
+.lr-word-details-sum {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  list-style: none;
+  padding: 0.2rem 0.12rem;
+  outline: none;
+  opacity: 0.82;
+}
+
+.lr-word-details-sum::-webkit-details-marker {
+  display: none;
+}
+
+.lr-word-details-sum::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.35rem;
+  transition: transform 0.15s ease;
+  opacity: 0.75;
+  font-size: 0.75em;
+}
+
+.lr-word-card-details[open] > .lr-word-details-sum::before {
+  transform: rotate(90deg);
+}
+
+.lr-word-details-body {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.2rem 0.12rem 0.12rem 0.3rem;
+  margin-top: 0.1rem;
+}
+
+.lr-word-details-pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.lr-word-details-line {
+  margin: 0;
+  font-size: 0.845rem;
+  line-height: 1.45;
+}
+
+.lr-word-details-k {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.2rem;
+  opacity: 0.72;
+}
+
+.lr-word-details-block .lr-word-details-k {
+  margin-bottom: 0.25rem;
+}
+
+.lr-word-details-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lr-word-details-link:hover {
+  opacity: 0.9;
+}
+
+.lr-word-lesson {
+  font-size: 0.845rem;
+}
+
+.lr-word-thumb-svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: rgba(226, 232, 240, 0.45);
+}
+
+[data-theme="light"] .lr-word-thumb-svg {
+  color: rgba(100, 116, 139, 0.42);
+}
+
+.lr-word-def {
+  white-space: pre-wrap;
+}
+
+.lr-word-card-code {
+  font-size: 0.78em;
+}
+
+[data-theme="light"] .lr-lang-pill {
+  background: rgba(0, 0, 0, 0.04);
 }

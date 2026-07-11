@@ -17,6 +17,7 @@ import {
   type TopicStatus,
   type TopicCompletionSummary,
 } from "./lesson-shared";
+import { useDeveloperMode } from "@/lib/developer-mode";
 
 function flattenLessonsInUiHierarchyOrder(groupLessons: Lesson[]): Lesson[] {
   const ordered: Lesson[] = [];
@@ -40,6 +41,7 @@ function flattenLessonsInUiHierarchyOrder(groupLessons: Lesson[]): Lesson[] {
 export function useLessonProgression(language: LessonLanguage) {
   const { getProgress } = useTopicProgressStore();
   const { chunks } = useProgressStore();
+  const { enabled: developerModeEnabled } = useDeveloperMode();
 
   const lessonsById = useMemo(() => new Map(lessons.map((l) => [l.id, l])), []);
 
@@ -257,7 +259,7 @@ export function useLessonProgression(language: LessonLanguage) {
           consistency: { value: 0, source: "approx" },
         },
       };
-      const isLockedBySequence = lockedById.get(topic.id) ?? false;
+      const isLockedBySequence = developerModeEnabled ? false : (lockedById.get(topic.id) ?? false);
       if (
         topic.trackType === "language-specific" &&
         (!topic.required || topic.sourceType === "generated")
@@ -268,7 +270,15 @@ export function useLessonProgression(language: LessonLanguage) {
       map.set(topic.id, getLessonProgressStatus(completion.completion, isLockedBySequence));
     });
     return map;
-  }, [getProgress, languageLessons, lockedById, language, topicCompletionById, topicProgressById]);
+  }, [
+    developerModeEnabled,
+    getProgress,
+    languageLessons,
+    lockedById,
+    language,
+    topicCompletionById,
+    topicProgressById,
+  ]);
 
   return {
     languageLessons,

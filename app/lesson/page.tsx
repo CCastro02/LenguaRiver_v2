@@ -35,6 +35,12 @@ import {
   type ScenarioFamilyTierKey,
 } from "@/lib/lesson-scenario-family";
 import { getScenarioTierGates } from "./lesson-tier-gates";
+import { DeveloperModeActiveBanner, useDeveloperMode } from "@/lib/developer-mode";
+import {
+  buildScenarioTierCompletionSignature,
+  getDefaultOpenScenarioTier,
+  type ScenarioTierSnapshot,
+} from "@/lib/lesson-tier-dropdown";
 
 const DEFAULT_OPEN_GROUP = CORE_GROUP_ORDER[0] ?? "";
 
@@ -54,6 +60,43 @@ function continuationLessonsInTierOrder(
     out.push(...[...raw].sort((a, b) => a.title.localeCompare(b.title)));
   }
   return out;
+}
+
+function collectScenarioTierSnapshots(
+  groupLessons: Lesson[],
+  completionById: Map<string, { isCompleted: boolean }>
+): ScenarioTierSnapshot[] {
+  const snapshots: ScenarioTierSnapshot[] = [];
+  const topicContexts = groupLessonsByTopicContextScenario(groupLessons);
+  const visitScenarios = (scenarios: ScenarioGroup[]) => {
+    scenarios.forEach((scenario) => {
+      const presentTiers = presentOnlyTierBuckets(scenario.tiers);
+      const orderedTiersPresent = getOrderedScenarioTiers(presentTiers).filter(
+        (bucket) => bucket.lessons.length > 0
+      );
+      if (orderedTiersPresent.length === 0) {
+        return;
+      }
+      const tierGate = getScenarioTierGates(
+        orderedTiersPresent,
+        (lesson) => completionById.get(lesson.id)?.isCompleted ?? false
+      );
+      snapshots.push({
+        scenarioKey: scenario.scenarioKey,
+        orderedTiers: orderedTiersPresent.map((bucket) => ({ tier: bucket.tier })),
+        tierGate,
+      });
+    });
+  };
+  topicContexts.forEach((topicGroup) => {
+    topicGroup.contextGroups.forEach((contextGroup) => {
+      visitScenarios(contextGroup.scenarios);
+      contextGroup.contexts.forEach((contextNode) => {
+        visitScenarios(contextNode.scenarios);
+      });
+    });
+  });
+  return snapshots;
 }
 
 function presentOnlyTierBuckets(tiers: LessonTierBuckets): LessonTierBuckets {
@@ -167,6 +210,7 @@ function getLessonStatus(
 
 export default function LessonOverviewPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<LessonLanguage>("es");
+  const { enabled: developerModeEnabled } = useDeveloperMode();
   const { getProgress } = useTopicProgressStore();
   const lessonsById = useMemo(() => new Map(lessons.map((l) => [l.id, l])), []);
   const {
@@ -179,6 +223,12 @@ export default function LessonOverviewPage() {
   } = useLessonProgression(selectedLanguage);
   const [hasMounted, setHasMounted] = useState(false);
   const [openCoreGroupTitle, setOpenCoreGroupTitle] = useState<string>(DEFAULT_OPEN_GROUP);
+  const [openTierByScenarioKey, setOpenTierByScenarioKey] = useState<
+    Record<string, ScenarioFamilyTierKey>
+  >({});
+  const [tierDropdownUserControlled, setTierDropdownUserControlled] = useState<Set<string>>(
+    () => new Set()
+  );
 
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- client mounted; first paint false matches SSR */
@@ -198,6 +248,72 @@ export default function LessonOverviewPage() {
     return () => document.removeEventListener("touchstart", onTouchStartCapture, { capture: true });
   }, []);
   const showHydratedProgress = hasMounted;
+
+  const allOverviewLessons = useMemo(
+    () => [
+      ...coreGroups.flatMap((group) => group.topics),
+      ...requiredLanguageSpecific,
+      ...optionalLanguageSpecific,
+      ...optionalGeneratedLanguageSpecific,
+    ],
+    [
+      coreGroups,
+      requiredLanguageSpecific,
+      optionalLanguageSpecific,
+      optionalGeneratedLanguageSpecific,
+    ]
+  );
+
+  const tierCompletionById = useMemo(() => {
+    const map = new Map<string, { isCompleted: boolean }>();
+    allOverviewLessons.forEach((topic) => {
+      const hydrated = topicCompletionById.get(topic.id);
+      map.set(topic.id, {
+        isCompleted: showHydratedProgress ? (hydrated?.isCompleted ?? false) : false,
+      });
+    });
+    return map;
+  }, [allOverviewLessons, showHydratedProgress, topicCompletionById]);
+
+  const scenarioTierSnapshots = useMemo(() => {
+    if (!showHydratedProgress) {
+      return [];
+    }
+    return collectScenarioTierSnapshots(allOverviewLessons, tierCompletionById);
+  }, [allOverviewLessons, showHydratedProgress, tierCompletionById]);
+
+  const scenarioTierCompletionSignature = useMemo(
+    () => buildScenarioTierCompletionSignature(scenarioTierSnapshots),
+    [scenarioTierSnapshots]
+  );
+
+  useEffect(() => {
+    if (!hasMounted || !showHydratedProgress || scenarioTierSnapshots.length === 0) {
+      return;
+    }
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- auto-open next incomplete tier when completion changes */
+    setOpenTierByScenarioKey((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      scenarioTierSnapshots.forEach((snapshot) => {
+        if (tierDropdownUserControlled.has(snapshot.scenarioKey)) {
+          return;
+        }
+        const defaultTier = getDefaultOpenScenarioTier(snapshot.orderedTiers, snapshot.tierGate);
+        if (next[snapshot.scenarioKey] !== defaultTier) {
+          next[snapshot.scenarioKey] = defaultTier;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [
+    hasMounted,
+    scenarioTierCompletionSignature,
+    scenarioTierSnapshots,
+    showHydratedProgress,
+    tierDropdownUserControlled,
+  ]);
 
   /* Open the core group that matches last lesson (sessionStorage) or the first pathway group. */
   useLayoutEffect(() => {
@@ -241,7 +357,9 @@ export default function LessonOverviewPage() {
     const completion = getCompletion(topic);
     const isLockedByProgression =
       !options?.omitProgressionLock && showHydratedProgress ? status === "Locked" : false;
-    const isLocked = Boolean(options?.forceLocked) || isLockedByProgression;
+    const isLocked = developerModeEnabled
+      ? false
+      : Boolean(options?.forceLocked) || isLockedByProgression;
     const tierPrefix = options?.tierLabel ? `${options.tierLabel} · ` : "";
 
     return (
@@ -309,9 +427,9 @@ export default function LessonOverviewPage() {
       });
       return renderLessonEntry(lesson, {
         tierLabel: tierLabelForRow,
-        forceLocked: tierForceLocked || !unlock.unlocked,
+        forceLocked: developerModeEnabled ? false : tierForceLocked || !unlock.unlocked,
         continuationLockReason:
-          !unlock.unlocked && unlock.reason ? unlock.reason : undefined,
+          developerModeEnabled || unlock.unlocked || !unlock.reason ? undefined : unlock.reason,
         omitProgressionLock: true,
         hideOptionalBadge: true,
       });
@@ -351,7 +469,7 @@ export default function LessonOverviewPage() {
                           ? formatTierLabel(tierBucket.tier)
                           : "Open Lesson / Legacy";
                         const gate = tierGate[tierBucket.tier];
-                        const isLockedTier = !gate.unlocked;
+                        const isLockedTier = developerModeEnabled ? false : !gate.unlocked;
                         const completionMeta =
                           tierBucket.tier === "easy"
                             ? `Easy completion: ${gate.completionPercent ?? 0}%`
@@ -360,9 +478,37 @@ export default function LessonOverviewPage() {
                               : null;
                         const tierContinuationLessons = continuationLessonsInTierOrder(byTense, tierBucket.tier);
                         const rowTierLabel = structuredPresent ? tierLabel : undefined;
+                        const resolvedOpenTier =
+                          openTierByScenarioKey[scenario.scenarioKey] ??
+                          getDefaultOpenScenarioTier(
+                            orderedTiersPresent.map((bucket) => ({ tier: bucket.tier })),
+                            tierGate
+                          );
                         return (
                           <li key={`tier-${scenario.scenarioKey}-${tierBucket.tier}`} className="lr-h-level lr-h-level--tier">
-                            <details className="lr-h-details lr-h-details--tier" open={tierBucket.tier === "easy"}>
+                            <details
+                              className="lr-h-details lr-h-details--tier"
+                              open={resolvedOpenTier === tierBucket.tier}
+                              onToggle={(event) => {
+                                const opening = event.currentTarget.open;
+                                setTierDropdownUserControlled((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(scenario.scenarioKey);
+                                  return next;
+                                });
+                                setOpenTierByScenarioKey((prev) => {
+                                  if (opening) {
+                                    return { ...prev, [scenario.scenarioKey]: tierBucket.tier };
+                                  }
+                                  if (prev[scenario.scenarioKey] === tierBucket.tier) {
+                                    const next = { ...prev };
+                                    delete next[scenario.scenarioKey];
+                                    return next;
+                                  }
+                                  return prev;
+                                });
+                              }}
+                            >
                               <summary className="lr-h-summary lr-h-summary--tier">
                                 <span className={getTierChipClass(tierBucket.tier, structuredPresent)}>{tierLabel}</span>
                                 <span className="lr-tier-summary-meta">
@@ -454,6 +600,7 @@ export default function LessonOverviewPage() {
           TEST: Open Park Playing
         </Link>
         <h1>Lessons</h1>
+        <DeveloperModeActiveBanner />
         <p className="muted">Pick a topic, then open a lesson to work through the full session flow.</p>
         <section className="card lr-lesson-overview-language">
           <h2>Language</h2>

@@ -1,4 +1,4 @@
-import type { Lesson } from "@/lib/lesson-data";
+import type { Lesson, LessonTier } from "@/lib/lesson-data";
 import type { LessonCompletionStatus } from "@/lib/lesson-status";
 import { CORE_TOPICS, toCoreTopic, type CoreTopic } from "@/lib/core-topics";
 
@@ -84,3 +84,11 @@ export function getSourceTypeLabel(
 }
 
 export const LAST_LESSON_STORAGE_KEY = "lenguaRiver.lastLessonId";
+
+export function formatLessonTierLabel(tier: LessonTier): string {
+  return tier[0].toUpperCase() + tier.slice(1);
+}
+
+export function getLessonTierChipClass(tier: LessonTier): string {
+  return `lr-tier-chip lr-tier-chip--${tier}`;
+}

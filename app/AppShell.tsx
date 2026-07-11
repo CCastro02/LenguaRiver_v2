@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             style={{ textDecoration: "none", color: "inherit" }}
             aria-label="LenguaRiver home"
           >
-            <LenguaRiverMark />
+            <LenguaRiverMark decorative variant="sidebar" />
           </Link>
           <nav className="db-side-nav" aria-label="Main">
             <Link className="db-snav" href="/" data-active={pathname === "/" ? "true" : "false"}>
@@ -37,8 +37,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link className="db-snav" href="/review" data-active={pathname === "/review" ? "true" : "false"}>
               Review
             </Link>
+            <Link className="db-snav" href="/my-words" data-active={pathname === "/my-words" ? "true" : "false"}>
+              My Words
+            </Link>
             <Link className="db-snav" href="/progress" data-active={pathname === "/progress" ? "true" : "false"}>
-              My words
+              Progress
             </Link>
             <Link className="db-snav" href="/explore" data-active={pathname === "/explore" ? "true" : "false"}>
               Explore

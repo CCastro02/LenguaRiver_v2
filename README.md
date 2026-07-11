@@ -28,6 +28,16 @@ Lessons use the browser **Web Speech API** (`speechSynthesis`). If Spanish text 
 
 In development, the browser console logs `[TTS]` lines when playback runs so you can confirm `voice.lang` starts with `es` for Spanish lessons.
 
+## Lesson chunk images
+
+Root-relative paths on lesson words (e.g. `/images/chunks/...`) must point at files under `public/`. Validate before deploy or when changing lesson data:
+
+```bash
+npm run verify:lesson-images
+```
+
+Exit code `1` means at least one referenced file is missing under `public/`.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

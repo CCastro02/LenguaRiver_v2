@@ -27,36 +27,7 @@ export type LessonStatus = "completed" | "in progress" | "not started";
 
 type TopicProgressByLessonId = Map<string, TopicProgress>;
 
-export function getReviewIntervalMs(
-  timesCorrect: number,
-  repetitionPriority: "high" | "medium" | "low"
-): number {
-  if (repetitionPriority === "high") {
-    if (timesCorrect <= 1) {
-      return 3 * 60 * 1000;
-    }
-    if (timesCorrect <= 3) {
-      return 20 * 60 * 1000;
-    }
-    return 2 * 60 * 60 * 1000;
-  }
-  if (repetitionPriority === "low") {
-    if (timesCorrect <= 1) {
-      return 30 * 60 * 1000;
-    }
-    if (timesCorrect <= 3) {
-      return 3 * 60 * 60 * 1000;
-    }
-    return 18 * 60 * 60 * 1000;
-  }
-  if (timesCorrect <= 1) {
-    return 10 * 60 * 1000;
-  }
-  if (timesCorrect <= 3) {
-    return 60 * 60 * 1000;
-  }
-  return 6 * 60 * 60 * 1000;
-}
+export { getReviewIntervalMs } from "@/lib/review-queue";
 
 export function chunkAccuracy(timesSeen: number, timesCorrect: number): number {
   if (timesSeen === 0) {

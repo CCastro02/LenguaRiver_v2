@@ -31,11 +31,80 @@ import {
   getTargetLocaleForLanguage,
   speakTextWithPreferredVoice,
 } from "@/lib/tts-voice";
-import { phases, LAST_LESSON_STORAGE_KEY } from "./lesson-shared";
+import {
+  formatLessonTierLabel,
+  getLessonTierChipClass,
+  phases,
+  LAST_LESSON_STORAGE_KEY,
+} from "./lesson-shared";
+import { LessonComicPanel, type ComicBubbleControls } from "./LessonComicPanel";
+import type { ComicBubbleView } from "@/lib/comic-bubble-layout";
+import { LessonStoryPanel } from "./LessonStoryPanel";
+import {
+  getComicBubbleCompletionKey,
+  getComicBubbleSpeechTargetText,
+  normalizeComicBubbleText,
+} from "@/lib/comic-bubble-text";
+import { getComicPanelNavResetKey } from "@/lib/comic-panel-navigation";
+import { shouldRenderComicLesson } from "@/lib/lesson-display-mode";
+import { useLessonUiSettings } from "@/lib/useLessonUiSettings";
+import {
+  getCurrentLessonScene,
+  getNextLessonScene,
+  uiPhaseToStoryPhase,
+} from "@/lib/lesson-storyboard-resolver";
+import type { LessonStoryTier } from "@/lib/lesson-storyboard-types";
 import { useLessonProgression } from "./use-lesson-progression";
+import { DeveloperModeActiveBanner, useDeveloperMode } from "@/lib/developer-mode";
 import { computeWeightedMatchPercent, normalizeForSpeechCompare, RecordingPanel } from "./RecordingPanel";
 import { isBrowserSpeechRecognitionSupported } from "./useSpeechRecognition";
 import { useVocabularySession } from "./useVocabularySession";
+import {
+  getActiveRecallExerciseGateState,
+  getActiveRecallPhaseGateState,
+  getExposurePhaseGateState,
+  getPhaseAdvanceBlockedReason,
+  getReinforcementPhaseGateState,
+  type ActiveRecallExerciseGateInput,
+} from "@/lib/exercise-completion-gate";
+import {
+  getComicExposureBlockedDebugNote,
+  getComicExposurePhaseAdvanceBlockedReason,
+  getComicExposurePhaseGateState,
+  getIncompleteComicExposureKeys,
+  getRequiredComicExposureKeys,
+} from "@/lib/comic-exposure-gate";
+import {
+  buildVisibleComicBubblesForPhase,
+  findComicBubbleIndexByCompletionKey,
+  findLessonSentenceForComicBubble,
+} from "@/lib/comic-visible-bubbles";
+import {
+  focusComicInlineInput,
+  getComicBubbleRetryState,
+  shouldDisableComicInlineInput,
+  type ComicBubbleRetryKind,
+} from "@/lib/comic-bubble-retry";
+import { buildInlineBlankParts } from "@/lib/comic-inline-blank";
+import {
+  getComicActiveRecallBubbleActiveText,
+  getComicActiveRecallInputPlaceholder,
+  resolveComicActiveRecallTask,
+} from "@/lib/comic-active-recall-prompt";
+import {
+  resolveComicBubbleSpeechTarget,
+  shouldShowComicBubbleSpeak,
+} from "@/lib/comic-bubble-controls";
+import {
+  resolveActiveRecallExpectedAnswer,
+  resolveReinforcementExpectedAnswer,
+  shouldShowComicAnswerHints,
+} from "@/lib/comic-answer-hints";
+import { ComicAnswerHint } from "./ComicAnswerHint";
+import {
+  filterPracticeChunks,
+  shouldExcludeChunkFromPractice,
+} from "@/lib/lesson-chunk-filter";
 
 type ActiveRecallExerciseType =
   | "chunk-to-meaning"
@@ -93,6 +162,18 @@ function clampTtsRate(value: number): number {
 
 function clampRepeatCount(value: number): number {
   return Math.min(5, Math.max(1, Math.round(value)));
+}
+
+function LessonTierBadge({ tier }: { tier?: "easy" | "medium" | "real" }) {
+  if (tier) {
+    return (
+      <span className={getLessonTierChipClass(tier)}>{formatLessonTierLabel(tier)}</span>
+    );
+  }
+  if (process.env.NODE_ENV === "development") {
+    return <span className="muted">Unknown</span>;
+  }
+  return null;
 }
 
 function getExpectedSpeechText(exercise: ActiveRecallExercise): string {
@@ -418,25 +499,8 @@ function buildFillInPrompt(sentenceText: string, chunkText: string): string {
   return `${sentenceText.slice(0, start)}____${sentenceText.slice(end)}`;
 }
 
-function isLikelyPersonName(word: LessonWord, normalizedCategory?: string): boolean {
-  if (word.type === "person-name") {
-    return true;
-  }
-  if (normalizedCategory === "places") {
-    return false;
-  }
-  const normalizedText = normalizeAnswer(word.text);
-  if (!normalizedText || tokenize(word.text).length !== 1) {
-    return false;
-  }
-  const normalizedTranslation = normalizeAnswer(word.translation);
-  const textHasUppercase = /\p{Lu}/u.test(word.text);
-  const translationHasUppercase = /\p{Lu}/u.test(word.translation);
-  const translationMatchesText = normalizedTranslation === normalizedText;
-  const hasNameLikeTranslation =
-    translationHasUppercase && tokenize(word.translation).length <= 2 && word.partOfSpeech === "noun";
-
-  return textHasUppercase && (translationMatchesText || hasNameLikeTranslation);
+function lessonChunkFilterLanguage(language: LessonLanguage): "es" | "ru" {
+  return language === "ru" ? "ru" : "es";
 }
 
 function splitSentenceIntoPronunciationPhrases(sentenceText: string): string[] {
@@ -465,10 +529,18 @@ function splitSentenceIntoPronunciationPhrases(sentenceText: string): string[] {
   return phrases;
 }
 
-function buildPronunciationPracticeChunks(sentence: LessonSentence): PronunciationPracticeChunk[] {
+function buildPronunciationPracticeChunks(
+  sentence: LessonSentence,
+  language: LessonLanguage
+): PronunciationPracticeChunk[] {
   const fromWords: PronunciationPracticeChunk[] = [];
   sentence.words.forEach((word, index) => {
-    if (isLikelyPersonName(word)) {
+    if (
+      shouldExcludeChunkFromPractice(word, {
+        sentenceText: sentence.text,
+        language: lessonChunkFilterLanguage(language),
+      })
+    ) {
       return;
     }
     const exerciseText = getExerciseSurfaceText(word).trim();
@@ -814,9 +886,72 @@ function getFormalityTokens(language: LessonLanguage): { formal: string[]; infor
   return { formal: ["usted", "y usted"], informal: ["tú", "tu", "y tu"] };
 }
 
+function buildSentenceHelpKey(language: string, sentenceText: string): string {
+  return `${language}::sentence::${normalizeAnswer(sentenceText)}`;
+}
+
+function buildChunkHelpKey(language: string, chunkText: string): string {
+  return `${language}::chunk::${normalizeAnswer(chunkText)}`;
+}
+
+function isTargetLanguageTranslationExercise(type: ActiveRecallExerciseType): boolean {
+  return type === "meaning-to-chunk" || type === "full-sentence-recall";
+}
+
+function getActiveRecallMainInstruction(
+  type: ActiveRecallExerciseType,
+  language: LessonLanguage
+): string {
+  const languageName = getLanguageDisplayName(language);
+  if (type === "contextual-fill-in") {
+    return "Fill in the blank";
+  }
+  if (type === "chunk-to-meaning") {
+    return "Type the English translation.";
+  }
+  return `Translate this into ${languageName}.`;
+}
+
+function getActiveRecallTypingInstruction(
+  type: ActiveRecallExerciseType,
+  language: LessonLanguage
+): string {
+  if (isTargetLanguageTranslationExercise(type)) {
+    return `Type the ${getLanguageDisplayName(language)} translation.`;
+  }
+  return "Now type it to lock it in";
+}
+
+function getActiveRecallTypedPlaceholder(
+  type: ActiveRecallExerciseType,
+  language: LessonLanguage
+): string {
+  if (isTargetLanguageTranslationExercise(type)) {
+    return `Type the ${getLanguageDisplayName(language)} translation`;
+  }
+  if (type === "chunk-to-meaning") {
+    return "Type the English translation";
+  }
+  return "Type your answer";
+}
+
+function getActiveRecallSpeakingInstruction(
+  type: ActiveRecallExerciseType,
+  language: LessonLanguage
+): string {
+  if (isTargetLanguageTranslationExercise(type)) {
+    return `Say the ${getLanguageDisplayName(language)} translation out loud.`;
+  }
+  if (type === "chunk-to-meaning") {
+    return "Say the English meaning out loud.";
+  }
+  return "Speak your answer out loud, then stop or press Check.";
+}
+
 export function LessonRunner({ lessonId }: { lessonId: string }) {
   const router = useRouter();
   const { settings } = useAppSettings();
+  const { enabled: developerModeEnabled } = useDeveloperMode();
   const [selectedInterest] = useSelectedInterest();
   const lesson = lessons.find((oneLesson) => oneLesson.id === lessonId)!;
   const tierBaselineRate = lesson.tier
@@ -846,6 +981,9 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
   const { getProgress, markPhaseComplete, recordActiveRecallAttempt } = useTopicProgressStore();
   const lessonsById = useMemo(() => new Map(lessons.map((l) => [l.id, l])), []);
   const continuationDirectUrlLock = useMemo(() => {
+    if (developerModeEnabled) {
+      return null;
+    }
     if (!isContinuationTenseMode(normalizeTenseMode(lesson.tenseMode))) {
       return null;
     }
@@ -860,7 +998,7 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       return null;
     }
     return { reason };
-  }, [getProgress, lesson, lessonsById]);
+  }, [developerModeEnabled, getProgress, lesson, lessonsById]);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [showExposureTranslationBySentence, setShowExposureTranslationBySentence] = useState<
     Record<string, boolean>
@@ -891,12 +1029,30 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
     Record<string, boolean>
   >({});
   const [activeRecallVoiceCorrect, setActiveRecallVoiceCorrect] = useState<Record<string, boolean>>({});
+  const [activeRecallSpeechByExercise, setActiveRecallSpeechByExercise] = useState<
+    Record<string, { ok: boolean; matchPercent: number }>
+  >({});
+  const [comicRecordingRemountByExercise, setComicRecordingRemountByExercise] = useState<
+    Record<string, number>
+  >({});
   const [sessionWeakChunks, setSessionWeakChunks] = useState<Record<string, SessionWeakChunk>>({});
   const [reinforcementTargets, setReinforcementTargets] = useState<ReinforcementTarget[]>([]);
   const [reinforcementUsesFallback, setReinforcementUsesFallback] = useState(false);
   const [reinforcementTargetIndex, setReinforcementTargetIndex] = useState(0);
   const [reinforcementInput, setReinforcementInput] = useState("");
   const [reinforcementResult, setReinforcementResult] = useState<ActiveRecallResult | null>(null);
+  const [activeRecallWrongAttempts, setActiveRecallWrongAttempts] = useState<Record<string, number>>(
+    {}
+  );
+  const [activeRecallRevealAnswer, setActiveRecallRevealAnswer] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [reinforcementWrongAttempts, setReinforcementWrongAttempts] = useState<
+    Record<string, number>
+  >({});
+  const [reinforcementRevealAnswer, setReinforcementRevealAnswer] = useState<Record<string, boolean>>(
+    {}
+  );
   const [finishNavigationMessage, setFinishNavigationMessage] = useState<string | null>(null);
   const [selectedImageChunk, setSelectedImageChunk] = useState<LessonWord | null>(null);
   const [typingEnabledBySentence, setTypingEnabledBySentence] = useState<Record<string, boolean>>({});
@@ -909,14 +1065,11 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
   const [exposureShadowBySentence, setExposureShadowBySentence] = useState<
     Record<string, ExposureShadowSlice>
   >({});
-  function buildSentenceHelpKey(sentenceText: string): string {
-    return `${lesson.language}::sentence::${normalizeAnswer(sentenceText)}`;
-  }
-
-  function buildChunkHelpKey(chunkText: string): string {
-    return `${lesson.language}::chunk::${normalizeAnswer(chunkText)}`;
-  }
-
+  const [comicExposureFocusKey, setComicExposureFocusKey] = useState<string | null>(null);
+  const [comicExposureFocusRequest, setComicExposureFocusRequest] = useState(0);
+  const [comicBreakdownPracticeByKey, setComicBreakdownPracticeByKey] = useState<
+    Record<string, { played?: boolean; spoken?: boolean }>
+  >({});
   const recordSessionWeakChunk = useCallback(
     (chunk: Pick<LessonWord, "text" | "translation">, reason: WeakReason) => {
       const key = normalizeAnswer(chunk.text);
@@ -971,16 +1124,19 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
     [lesson.id, lesson.language, recordSpeechAttempt, trackWordExposure]
   );
 
-  function recordSentenceHelp(sentence: LessonSentence, helpType: "translation" | "phonetic") {
-    recordHelpReveal(buildSentenceHelpKey(sentence.text), helpType);
-    sentence.words.forEach((word) => {
-      if (word.type === "person-name") {
-        return;
-      }
-      recordHelpReveal(buildChunkHelpKey(word.text), helpType);
-      recordSessionWeakChunk(word, "help");
-    });
-  }
+  const recordSentenceHelp = useCallback(
+    (sentence: LessonSentence, helpType: "translation" | "phonetic") => {
+      recordHelpReveal(buildSentenceHelpKey(lesson.language, sentence.text), helpType);
+      sentence.words.forEach((word) => {
+        if (word.type === "person-name") {
+          return;
+        }
+        recordHelpReveal(buildChunkHelpKey(lesson.language, word.text), helpType);
+        recordSessionWeakChunk(word, "help");
+      });
+    },
+    [lesson.language, recordHelpReveal, recordSessionWeakChunk]
+  );
 
   const adaptiveLesson = useMemo(() => {
     const fallbackSentences = lesson.sentences.slice(0, 4);
@@ -1010,8 +1166,16 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       };
     }
 
+    const chunkLanguage = lessonChunkFilterLanguage(lesson.language);
     const uniqueLessonChunks = Array.from(
-      new Set(lesson.sentences.flatMap((sentence) => sentence.words.map((word) => word.text)))
+      new Set(
+        lesson.sentences.flatMap((sentence) =>
+          filterPracticeChunks(sentence.words, {
+            sentenceText: sentence.text,
+            language: chunkLanguage,
+          }).map((word) => word.text)
+        )
+      )
     );
 
     const lessonChunkSet = new Set(uniqueLessonChunks.map((text) => text.toLowerCase()));
@@ -1220,12 +1384,17 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
   }, [lesson.language]);
 
   const seededActiveRecallExercises = useMemo(() => {
+    const chunkLanguage = lessonChunkFilterLanguage(lesson.language);
     const weakSet = new Set(adaptiveLesson.weakChunks.map((chunk) => chunk.toLowerCase()));
     const scoredChunks = Array.from(
       new Map(
         adaptiveLesson.sentences
-          .flatMap((sentence) => sentence.words)
-          .filter((word) => !isLikelyPersonName(word, chunkCategoryByText.get(word.text.toLowerCase())))
+          .flatMap((sentence) =>
+            filterPracticeChunks(sentence.words, {
+              sentenceText: sentence.text,
+              language: chunkLanguage,
+            })
+          )
           .map((word) => [word.text.toLowerCase(), word] as const)
       ).values()
     )
@@ -1238,23 +1407,29 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       }))
       .sort((a, b) => b.score - a.score);
 
-    const chunkToMeaning = scoredChunks.slice(0, 2).map((entry, index) => ({
-      id: `chunk-meaning-${index}`,
-      type: "chunk-to-meaning" as const,
-      prompt: `${entry.word.text}`,
-      expectedParts: tokenize(entry.word.translation),
-      // Expand with known synonyms so evaluateAcceptedMeanings is always used
-      // and common equivalents (e.g. "hi" for "hello") are accepted.
-      targetChunks: [
-        {
-          ...entry.word,
-          acceptedMeanings: getAcceptedMeanings(
-            entry.word.translation,
-            entry.word.acceptedMeanings
-          ),
-        },
-      ],
-    }));
+    const chunkToMeaning = scoredChunks.slice(0, 2).map((entry, index) => {
+      const sourceSentence = adaptiveLesson.sentences.find((sentence) =>
+        sentence.words.some((word) => word.text.toLowerCase() === entry.word.text.toLowerCase())
+      );
+      return {
+        id: `chunk-meaning-${index}`,
+        type: "chunk-to-meaning" as const,
+        prompt: `${entry.word.text}`,
+        expectedParts: tokenize(entry.word.translation),
+        sentenceText: sourceSentence?.text,
+        // Expand with known synonyms so evaluateAcceptedMeanings is always used
+        // and common equivalents (e.g. "hi" for "hello") are accepted.
+        targetChunks: [
+          {
+            ...entry.word,
+            acceptedMeanings: getAcceptedMeanings(
+              entry.word.translation,
+              entry.word.acceptedMeanings
+            ),
+          },
+        ],
+      };
+    });
 
     const meaningToChunk = scoredChunks.slice(2, 4).map((entry, index) => ({
       id: `meaning-chunk-${index}`,
@@ -1276,7 +1451,13 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
         return;
       }
       const analyzedCandidates = sentence.words
-        .filter((word) => !isLikelyPersonName(word, chunkCategoryByText.get(word.text.toLowerCase())))
+        .filter(
+          (word) =>
+            !shouldExcludeChunkFromPractice(word, {
+              sentenceText: sentence.text,
+              language: chunkLanguage,
+            })
+        )
         .map((word) => {
           const normalizedCategory = chunkCategoryByText.get(word.text.toLowerCase());
           const normalizedKey = normalizeAnswer(word.text);
@@ -1374,6 +1555,12 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
     });
 
     const sentenceRecallSource = adaptiveLesson.sentences[0];
+    const recallPracticeWords = sentenceRecallSource
+      ? filterPracticeChunks(sentenceRecallSource.words, {
+          sentenceText: sentenceRecallSource.text,
+          language: chunkLanguage,
+        })
+      : [];
     const fullSentenceRecall = sentenceRecallSource
       ? [
           {
@@ -1381,19 +1568,19 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
             type: "full-sentence-recall" as const,
             prompt: `${sentenceRecallSource.translation}`,
             expectedParts: uniqueOrderedStrings(
-              sentenceRecallSource.words.map((word) => getExerciseSurfaceText(word))
+              recallPracticeWords.map((word) => getExerciseSurfaceText(word))
             ),
             expectedPhoneticParts: uniqueOrderedStrings(
               sentenceRecallSource.phonetic
                 ? [sentenceRecallSource.phonetic]
                 : [
-                    sentenceRecallSource.words
+                    recallPracticeWords
                       .map((word) => word.phonetic)
                       .filter((part): part is string => Boolean(part))
                       .join(" "),
                   ]
             ),
-            targetChunks: sentenceRecallSource.words,
+            targetChunks: recallPracticeWords,
             sentenceText: sentenceRecallSource.text,
             requiredFormality:
               sentenceRecallSource.formality === "formal" ||
@@ -1443,8 +1630,17 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       }
     >();
     const counts = new Map<string, number>();
+    const metaChunkLanguage = lessonChunkFilterLanguage(lesson.language);
     lesson.sentences.forEach((sentence) => {
       sentence.words.forEach((word) => {
+        if (
+          shouldExcludeChunkFromPractice(word, {
+            sentenceText: sentence.text,
+            language: metaChunkLanguage,
+          })
+        ) {
+          return;
+        }
         const key = normalizeAnswer(word.text);
         if (!key) {
           return;
@@ -1471,7 +1667,14 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
     });
     lesson.coreWords.forEach((coreChunk) => {
       const key = normalizeAnswer(coreChunk);
-      if (!key || map.has(key)) {
+      if (
+        !key ||
+        map.has(key) ||
+        shouldExcludeChunkFromPractice(
+          { text: coreChunk },
+          { language: metaChunkLanguage }
+        )
+      ) {
         return;
       }
       map.set(key, {
@@ -1482,7 +1685,7 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       });
     });
     return map;
-  }, [lesson.coreWords, lesson.sentences]);
+  }, [lesson.coreWords, lesson.language, lesson.sentences]);
   const reinforcementTargetCandidates = useMemo(() => {
     const weakTargets = Object.values(sessionWeakChunks)
       .flatMap((weak) => {
@@ -1564,25 +1767,6 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
 
   const currentPhase = phases[phaseIndex];
   const exposureSttSupported = hasMounted && isBrowserSpeechRecognitionSupported();
-  const exposureShadowGateStats = useMemo(() => {
-    const sentences = adaptiveLesson.sentences;
-    const completedShadowCount = sentences.filter((s) => {
-      const sh = exposureShadowBySentence[s.text] ?? EXPOSURE_SHADOW_DEFAULT;
-      if (!exposureSttSupported) {
-        return sh.hasPlayedAudio;
-      }
-      return sh.hasSpoken;
-    }).length;
-    return {
-      sentenceCount: sentences.length,
-      completedShadowCount,
-      requiredShadowCount: sentences.length,
-    };
-  }, [adaptiveLesson.sentences, exposureShadowBySentence, exposureSttSupported]);
-  const exposureShadowGateOk =
-    exposureShadowGateStats.sentenceCount === 0 ||
-    exposureShadowGateStats.completedShadowCount >= exposureShadowGateStats.requiredShadowCount;
-
   const exposureSentenceSignature = useMemo(
     () => adaptiveLesson.sentences.map((s) => s.text).join("\x1e"),
     [adaptiveLesson.sentences]
@@ -1596,7 +1780,6 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
     setExposureShadowBySentence({});
   }, [exposureSentenceSignature, hasMounted]);
 
-  /* eslint-disable react-hooks/preserve-manual-memoization -- existing callback memoization intentionally scoped */
   const submitActiveRecallExerciseCheck = useCallback(
     (exercise: ActiveRecallExercise, userAnswer: string) => {
       // For chunk-to-meaning, always use evaluateAcceptedMeanings so that
@@ -1744,6 +1927,29 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
         });
       }
       recordActiveRecallAttempt(lesson.language, lesson.id, detail.status === "correct");
+      if (detail.status === "correct") {
+        setActiveRecallWrongAttempts((prev) => {
+          if (!(exercise.id in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[exercise.id];
+          return next;
+        });
+        setActiveRecallRevealAnswer((prev) => {
+          if (!(exercise.id in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[exercise.id];
+          return next;
+        });
+      } else {
+        setActiveRecallWrongAttempts((prev) => ({
+          ...prev,
+          [exercise.id]: (prev[exercise.id] ?? 0) + 1,
+        }));
+      }
       setActiveRecallResults((prev) => ({
         ...prev,
         [exercise.id]: detail,
@@ -1764,8 +1970,43 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       trackWordExposure,
     ]
   );
+
+  const resetComicActiveRecallAttempt = useCallback(
+    (exerciseId: string, kind: ComicBubbleRetryKind) => {
+      if (kind === "typing" || kind === "both") {
+        setActiveRecallChecked((prev) => ({
+          ...prev,
+          [exerciseId]: false,
+        }));
+        setActiveRecallResults((prev) => {
+          const next = { ...prev };
+          delete next[exerciseId];
+          return next;
+        });
+        if (typeof window !== "undefined") {
+          window.requestAnimationFrame(() => focusComicInlineInput(exerciseId));
+        }
+      }
+      if (kind === "speaking" || kind === "both") {
+        setActiveRecallSpeechByExercise((prev) => {
+          const next = { ...prev };
+          delete next[exerciseId];
+          return next;
+        });
+        setActiveRecallVoiceCorrect((prev) => ({
+          ...prev,
+          [exerciseId]: false,
+        }));
+        setComicRecordingRemountByExercise((prev) => ({
+          ...prev,
+          [exerciseId]: (prev[exerciseId] ?? 0) + 1,
+        }));
+      }
+    },
+    []
+  );
+
   const previousPhaseRef = useRef<string | null>(null);
-  /* eslint-enable react-hooks/preserve-manual-memoization */
   useEffect(() => {
     const enteringReinforcement = currentPhase === "Reinforcement" && previousPhaseRef.current !== "Reinforcement";
     if (enteringReinforcement) {
@@ -1774,10 +2015,11 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       setReinforcementTargetIndex(0);
       setReinforcementInput("");
       setReinforcementResult(null);
+      setReinforcementWrongAttempts({});
+      setReinforcementRevealAnswer({});
     }
     previousPhaseRef.current = currentPhase;
   }, [currentPhase, reinforcementTargetCandidates]);
-  /* eslint-disable react-hooks/preserve-manual-memoization -- existing callback memoization intentionally scoped */
   const submitReinforcementTargetCheck = useCallback(() => {
     const currentTarget = reinforcementTargets[reinforcementTargetIndex];
     const input = reinforcementInput.trim();
@@ -1785,6 +2027,30 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
       return;
     }
     const detail = evaluateParts(input, currentTarget.expectedParts);
+    const targetKey = currentTarget.text;
+    if (detail.status === "correct") {
+      setReinforcementWrongAttempts((prev) => {
+        if (!(targetKey in prev)) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[targetKey];
+        return next;
+      });
+      setReinforcementRevealAnswer((prev) => {
+        if (!(targetKey in prev)) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[targetKey];
+        return next;
+      });
+    } else {
+      setReinforcementWrongAttempts((prev) => ({
+        ...prev,
+        [targetKey]: (prev[targetKey] ?? 0) + 1,
+      }));
+    }
     setReinforcementResult(detail);
     const chunkType = currentTarget.isCore ? "core" : "interest";
     const expectedText = currentTarget.expectedParts.join(" ").trim();
@@ -1828,74 +2094,139 @@ export function LessonRunner({ lessonId }: { lessonId: string }) {
     reinforcementTargets,
     trackWordExposure,
   ]);
-  /* eslint-enable react-hooks/preserve-manual-memoization */
 
-function isTargetLanguageTranslationExercise(type: ActiveRecallExerciseType): boolean {
-  return type === "meaning-to-chunk" || type === "full-sentence-recall";
-}
+  const activeRecallGateInputs = useMemo((): ActiveRecallExerciseGateInput[] => {
+    return activeRecallQueue.map((exercise) => {
+      const speech = activeRecallSpeechByExercise[exercise.id];
+      return {
+        exerciseId: exercise.id,
+        voiceMarkedCorrect: activeRecallVoiceCorrect[exercise.id] === true,
+        typingStatus: activeRecallResults[exercise.id]?.status,
+        speechEvalOk: speech?.ok,
+        speechMatchPercent: speech?.matchPercent ?? null,
+      };
+    });
+  }, [
+    activeRecallQueue,
+    activeRecallResults,
+    activeRecallSpeechByExercise,
+    activeRecallVoiceCorrect,
+  ]);
 
-function getActiveRecallMainInstruction(
-  type: ActiveRecallExerciseType,
-  language: LessonLanguage
-): string {
-  const languageName = getLanguageDisplayName(language);
-  if (type === "contextual-fill-in") {
-    return "Fill in the blank";
-  }
-  if (type === "chunk-to-meaning") {
-    return "Type the English translation.";
-  }
-  return `Translate this into ${languageName}.`;
-}
+  const activeRecallPhaseGate = useMemo(
+    () => getActiveRecallPhaseGateState(activeRecallGateInputs),
+    [activeRecallGateInputs]
+  );
 
-function getActiveRecallTypingInstruction(
-  type: ActiveRecallExerciseType,
-  language: LessonLanguage
-): string {
-  if (isTargetLanguageTranslationExercise(type)) {
-    return `Type the ${getLanguageDisplayName(language)} translation.`;
-  }
-  return "Now type it to lock it in";
-}
-
-function getActiveRecallTypedPlaceholder(
-  type: ActiveRecallExerciseType,
-  language: LessonLanguage
-): string {
-  if (isTargetLanguageTranslationExercise(type)) {
-    return `Type the ${getLanguageDisplayName(language)} translation`;
-  }
-  if (type === "chunk-to-meaning") {
-    return "Type the English translation";
-  }
-  return "Type your answer";
-}
-
-function getActiveRecallSpeakingInstruction(
-  type: ActiveRecallExerciseType,
-  language: LessonLanguage
-): string {
-  if (isTargetLanguageTranslationExercise(type)) {
-    return `Say the ${getLanguageDisplayName(language)} translation out loud.`;
-  }
-  if (type === "chunk-to-meaning") {
-    return "Say the English meaning out loud.";
-  }
-  return "Speak your answer out loud, then stop or press Check.";
-}
   const activeRecallCorrectCount = useMemo(
     () =>
-      activeRecallQueue.filter(
-        (exercise) =>
-          activeRecallVoiceCorrect[exercise.id] === true &&
-          activeRecallResults[exercise.id]?.status === "correct"
-      ).length,
-    [activeRecallResults, activeRecallQueue, activeRecallVoiceCorrect]
+      activeRecallGateInputs.filter((input) => getActiveRecallExerciseGateState(input).canComplete)
+        .length,
+    [activeRecallGateInputs]
   );
-  const activeRecallCompleted =
-    activeRecallQueue.length === 0 || activeRecallCorrectCount === activeRecallQueue.length;
-  const reinforcementWriteGateOk =
-    reinforcementTargets.length === 0 || reinforcementTargetIndex >= reinforcementTargets.length;
+
+  const storyPhase = uiPhaseToStoryPhase(currentPhase);
+
+  const storySentenceProgressIndex = useMemo(() => {
+    if (currentPhase !== "Exposure" && currentPhase !== "Breakdown") {
+      return undefined;
+    }
+    const sentences = adaptiveLesson.sentences;
+    if (sentences.length === 0) {
+      return 0;
+    }
+    let progressed = 0;
+    for (let i = 0; i < sentences.length; i += 1) {
+      const key = sentences[i].text;
+      if (currentPhase === "Exposure") {
+        const shadow = exposureShadowBySentence[key] ?? EXPOSURE_SHADOW_DEFAULT;
+        if (shadow.hasPlayedAudio || shadow.hasSpoken) {
+          progressed = i + 1;
+        }
+      } else if (showBreakdownPhoneticBySentence[key] || showContextNoteBySentence[key]) {
+        progressed = i + 1;
+      }
+    }
+    return Math.min(progressed, sentences.length - 1);
+  }, [
+    adaptiveLesson.sentences,
+    currentPhase,
+    exposureShadowBySentence,
+    showBreakdownPhoneticBySentence,
+    showContextNoteBySentence,
+  ]);
+
+  const storyExerciseProgressIndex = useMemo(() => {
+    if (currentPhase === "Active Recall") {
+      if (activeRecallQueue.length === 0) {
+        return 0;
+      }
+      const completed = activeRecallGateInputs.filter(
+        (input) => getActiveRecallExerciseGateState(input).canComplete
+      ).length;
+      return Math.min(completed, activeRecallQueue.length - 1);
+    }
+    if (currentPhase === "Reinforcement") {
+      return reinforcementTargetIndex;
+    }
+    return undefined;
+  }, [
+    activeRecallGateInputs,
+    activeRecallQueue.length,
+    currentPhase,
+    reinforcementTargetIndex,
+  ]);
+
+  const lessonStoryTier: LessonStoryTier = lesson.tier ?? "easy";
+  const { settings: lessonUiSettings } = useLessonUiSettings();
+
+  const currentStoryScene = useMemo(
+    () =>
+      getCurrentLessonScene({
+        lessonId: lesson.id,
+        phase: storyPhase,
+        sentenceIndex: storySentenceProgressIndex,
+        exerciseIndex: storyExerciseProgressIndex,
+      }),
+    [
+      lesson.id,
+      storyExerciseProgressIndex,
+      storyPhase,
+      storySentenceProgressIndex,
+    ]
+  );
+
+  const nextStoryScene = useMemo(
+    () =>
+      getNextLessonScene({
+        lessonId: lesson.id,
+        phase: storyPhase,
+        sentenceIndex: storySentenceProgressIndex,
+        exerciseIndex: storyExerciseProgressIndex,
+      }),
+    [
+      lesson.id,
+      storyExerciseProgressIndex,
+      storyPhase,
+      storySentenceProgressIndex,
+    ]
+  );
+
+  useEffect(() => {
+    const url = nextStoryScene?.imageUrl ?? nextStoryScene?.thumbnailUrl;
+    if (!url || typeof window === "undefined") {
+      return;
+    }
+    const img = new window.Image();
+    img.src = url;
+  }, [nextStoryScene?.imageUrl, nextStoryScene?.thumbnailUrl]);
+
+  const reinforcementPhaseGate = useMemo(
+    () =>
+      getReinforcementPhaseGateState(reinforcementTargets.length, reinforcementTargetIndex),
+    [reinforcementTargetIndex, reinforcementTargets.length]
+  );
+  const reinforcementWriteGateOk = reinforcementPhaseGate.canComplete;
   const activeRecallSummary = useMemo(() => {
     const values = Object.values(activeRecallResults);
     return values.reduce(
@@ -1936,16 +2267,1085 @@ function getActiveRecallSpeakingInstruction(
     showHydratedProgress &&
     isPhaseName(currentPhase) &&
     selectedTopicProgress.completedPhases[currentPhase] === true;
-  const currentPhaseLocalGateOk =
+
+  const useComicLesson = shouldRenderComicLesson({
+    lessonDisplayMode: lessonUiSettings.lessonDisplayMode,
+    lessonId: lesson.id,
+    scene: currentStoryScene,
+  });
+
+  /** Comic Exposure stays on the first exposure scene; sentence progress must not swap scenes. */
+  const comicDisplayScene = useMemo(() => {
+    if (!useComicLesson || currentPhase !== "Exposure") {
+      return currentStoryScene;
+    }
+    return (
+      getCurrentLessonScene({
+        lessonId: lesson.id,
+        phase: storyPhase,
+        sentenceIndex: 0,
+      }) ?? currentStoryScene
+    );
+  }, [currentPhase, currentStoryScene, lesson.id, storyPhase, useComicLesson]);
+
+  const showComicVisualHint =
+    useComicLesson &&
+    lessonStoryTier !== "real" &&
+    (currentStoryScene?.hintStrength === "strong" ||
+      currentStoryScene?.hintStrength === "medium");
+
+  const comicExposureBubbles = useMemo(() => {
+    if (!useComicLesson || currentPhase !== "Exposure" || !comicDisplayScene) {
+      return [];
+    }
+    return buildVisibleComicBubblesForPhase({
+      scene: comicDisplayScene,
+      phase: "exposure",
+      tier: lessonStoryTier,
+      showCaption: showComicVisualHint,
+      showAllPanels: true,
+      activeText: null,
+    });
+  }, [
+    comicDisplayScene,
+    currentPhase,
+    lessonStoryTier,
+    showComicVisualHint,
+    useComicLesson,
+  ]);
+
+  const comicExposureRequiredKeys = useMemo(
+    () => getRequiredComicExposureKeys(comicExposureBubbles),
+    [comicExposureBubbles]
+  );
+
+  const exposurePhaseGate = useMemo(() => {
+    if (useComicLesson && currentPhase === "Exposure" && comicDisplayScene) {
+      return getComicExposurePhaseGateState(
+        comicExposureRequiredKeys,
+        exposureShadowBySentence,
+        exposureSttSupported
+      );
+    }
+    return getExposurePhaseGateState(
+      adaptiveLesson.sentences.map((sentence) => sentence.text),
+      exposureShadowBySentence,
+      exposureSttSupported
+    );
+  }, [
+    adaptiveLesson.sentences,
+    comicDisplayScene,
+    comicExposureRequiredKeys,
+    currentPhase,
+    exposureShadowBySentence,
+    exposureSttSupported,
+    useComicLesson,
+  ]);
+  const currentPhaseLocalGate =
     currentPhase === "Active Recall"
-      ? activeRecallCompleted
+      ? activeRecallPhaseGate
       : currentPhase === "Exposure"
-        ? exposureShadowGateOk
+        ? exposurePhaseGate
         : currentPhase === "Reinforcement"
-          ? reinforcementWriteGateOk
-          : true;
+          ? reinforcementPhaseGate
+          : { canComplete: true, missing: [], completedSections: [] };
+  const currentPhaseLocalGateOk = currentPhaseLocalGate.canComplete;
   const canAdvanceCurrentPhase = currentPhaseMarkedComplete || currentPhaseLocalGateOk;
+  const phaseAdvanceBlockedReason =
+    useComicLesson && currentPhase === "Exposure"
+      ? getComicExposurePhaseAdvanceBlockedReason(exposurePhaseGate)
+      : getPhaseAdvanceBlockedReason(currentPhaseLocalGate);
   const isFinalPhase = phaseIndex === phases.length - 1;
+
+  const comicExposureSentence =
+    currentPhase === "Exposure"
+      ? adaptiveLesson.sentences[storySentenceProgressIndex ?? 0] ?? null
+      : null;
+
+  const comicFocusExerciseIndex = useMemo(() => {
+    if (currentPhase !== "Active Recall" || activeRecallQueue.length === 0) {
+      return 0;
+    }
+    const firstIncomplete = activeRecallGateInputs.findIndex(
+      (input) => !getActiveRecallExerciseGateState(input).canComplete
+    );
+    if (firstIncomplete >= 0) {
+      return firstIncomplete;
+    }
+    return Math.min(storyExerciseProgressIndex ?? 0, activeRecallQueue.length - 1);
+  }, [
+    activeRecallGateInputs,
+    activeRecallQueue.length,
+    currentPhase,
+    storyExerciseProgressIndex,
+  ]);
+
+  const comicActiveRecallExercise =
+    currentPhase === "Active Recall"
+      ? activeRecallQueue[comicFocusExerciseIndex] ?? null
+      : null;
+
+  const comicActiveText = useMemo(() => {
+    let raw: string | null = null;
+    if (currentPhase === "Exposure" && comicExposureSentence) {
+      raw = comicExposureSentence.text;
+    } else if (currentPhase === "Active Recall" && comicActiveRecallExercise) {
+      raw = getComicActiveRecallBubbleActiveText(comicActiveRecallExercise);
+    } else if (currentPhase === "Reinforcement" && currentReinforcementTarget) {
+      raw = currentReinforcementTarget.text;
+    } else if (currentPhase === "Breakdown") {
+      const sentence = adaptiveLesson.sentences[storySentenceProgressIndex ?? 0];
+      raw = sentence?.text ?? null;
+    }
+    return raw ? normalizeComicBubbleText(raw) : null;
+  }, [
+    adaptiveLesson.sentences,
+    comicActiveRecallExercise,
+    comicExposureSentence,
+    currentPhase,
+    currentReinforcementTarget,
+    storySentenceProgressIndex,
+  ]);
+
+  const exposureProgressPercent = useMemo(() => {
+    if (useComicLesson && currentPhase === "Exposure" && comicExposureRequiredKeys.length > 0) {
+      let done = 0;
+      for (const key of comicExposureRequiredKeys) {
+        const shadow = exposureShadowBySentence[key] ?? EXPOSURE_SHADOW_DEFAULT;
+        const complete = exposureSttSupported ? shadow.hasSpoken : shadow.hasPlayedAudio;
+        if (complete) {
+          done += 1;
+        }
+      }
+      return Math.round((done / comicExposureRequiredKeys.length) * 100);
+    }
+    const total = adaptiveLesson.sentences.length;
+    if (total === 0) {
+      return 0;
+    }
+    let done = 0;
+    for (const sentence of adaptiveLesson.sentences) {
+      const shadow = exposureShadowBySentence[sentence.text] ?? EXPOSURE_SHADOW_DEFAULT;
+      const complete = exposureSttSupported
+        ? shadow.hasPlayedAudio && shadow.hasSpoken
+        : shadow.hasPlayedAudio;
+      if (complete) {
+        done += 1;
+      }
+    }
+    return Math.round((done / total) * 100);
+  }, [
+    adaptiveLesson.sentences,
+    comicExposureRequiredKeys,
+    currentPhase,
+    exposureShadowBySentence,
+    exposureSttSupported,
+    useComicLesson,
+  ]);
+
+  const activeRecallProgressPercent = useMemo(() => {
+    if (activeRecallQueue.length === 0) {
+      return 0;
+    }
+    return Math.round((activeRecallCorrectCount / activeRecallQueue.length) * 100);
+  }, [activeRecallCorrectCount, activeRecallQueue.length]);
+
+  const handleAdvancePhase = useCallback(() => {
+    setFinishNavigationMessage(null);
+    const phaseName = phases[phaseIndex];
+    if (isPhaseName(phaseName)) {
+      markPhaseComplete(lesson.language, lesson.id, phaseName);
+    }
+    if (!isFinalPhase) {
+      setPhaseIndex((prev) => prev + 1);
+    }
+  }, [
+    isFinalPhase,
+    lesson.id,
+    lesson.language,
+    markPhaseComplete,
+    phaseIndex,
+  ]);
+
+  const comicArExerciseGate = useMemo(() => {
+    if (!comicActiveRecallExercise) {
+      return null;
+    }
+    const exercise = comicActiveRecallExercise;
+    const speech = activeRecallSpeechByExercise[exercise.id];
+    return getActiveRecallExerciseGateState({
+      exerciseId: exercise.id,
+      voiceMarkedCorrect: activeRecallVoiceCorrect[exercise.id] === true,
+      typingStatus: activeRecallResults[exercise.id]?.status,
+      speechEvalOk: speech?.ok,
+      speechMatchPercent: speech?.matchPercent ?? null,
+    });
+  }, [
+    activeRecallResults,
+    activeRecallSpeechByExercise,
+    activeRecallVoiceCorrect,
+    comicActiveRecallExercise,
+  ]);
+
+  const comicScorePercent =
+    currentPhase === "Exposure"
+      ? exposureProgressPercent
+      : currentPhase === "Active Recall"
+        ? activeRecallProgressPercent
+        : currentPhase === "Reinforcement" && reinforcementTargets.length > 0
+          ? Math.round(
+              (Math.min(reinforcementTargetIndex, reinforcementTargets.length) /
+                reinforcementTargets.length) *
+                100
+            )
+          : undefined;
+
+  const comicShowAllPanels =
+    currentPhase === "Exposure" || currentPhase === "Breakdown";
+
+  const comicPanelNavResetKey = useMemo(() => {
+    const sceneForNav = comicDisplayScene ?? currentStoryScene;
+    if (!sceneForNav) {
+      return "none";
+    }
+    return getComicPanelNavResetKey({
+      lessonId: lesson.id,
+      sceneId: sceneForNav.id,
+      phase: storyPhase,
+      activeRecallExerciseId: comicActiveRecallExercise?.id ?? null,
+      reinforcementTargetKey: currentReinforcementTarget?.text ?? null,
+    });
+  }, [
+    comicActiveRecallExercise?.id,
+    comicDisplayScene,
+    currentReinforcementTarget?.text,
+    currentStoryScene,
+    lesson.id,
+    storyPhase,
+  ]);
+
+  const comicPanelNavResetKeyWithFocus = useMemo(() => {
+    if (!comicExposureFocusKey || comicExposureFocusRequest === 0) {
+      return comicPanelNavResetKey;
+    }
+    return `${comicPanelNavResetKey}:focus:${comicExposureFocusKey}:${comicExposureFocusRequest}`;
+  }, [
+    comicExposureFocusKey,
+    comicExposureFocusRequest,
+    comicPanelNavResetKey,
+  ]);
+
+  const incompleteComicExposureKeys = useMemo(() => {
+    if (!useComicLesson || currentPhase !== "Exposure") {
+      return [];
+    }
+    return getIncompleteComicExposureKeys(
+      comicExposureRequiredKeys,
+      exposureShadowBySentence,
+      exposureSttSupported
+    );
+  }, [
+    comicExposureRequiredKeys,
+    currentPhase,
+    exposureShadowBySentence,
+    exposureSttSupported,
+    useComicLesson,
+  ]);
+
+  const comicExposureDebugNote = useMemo(() => {
+    const debugEnabled =
+      process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_LR_DEBUG_COMIC === "1";
+    if (!debugEnabled || incompleteComicExposureKeys.length === 0) {
+      return null;
+    }
+    return getComicExposureBlockedDebugNote(incompleteComicExposureKeys);
+  }, [incompleteComicExposureKeys]);
+
+  const firstIncompleteComicExposureKey = incompleteComicExposureKeys[0] ?? null;
+
+  const comicExposureGoToMissingIndex = useMemo(() => {
+    if (!firstIncompleteComicExposureKey) {
+      return -1;
+    }
+    return findComicBubbleIndexByCompletionKey(
+      comicExposureBubbles,
+      firstIncompleteComicExposureKey
+    );
+  }, [comicExposureBubbles, firstIncompleteComicExposureKey]);
+
+  const comicPhaseAdvanceNote =
+    useComicLesson && currentPhase === "Exposure" && !canAdvanceCurrentPhase
+      ? [phaseAdvanceBlockedReason ?? "Complete speaking/writing to continue.", comicExposureDebugNote]
+          .filter(Boolean)
+          .join(" ")
+      : useComicLesson && !canAdvanceCurrentPhase
+        ? (phaseAdvanceBlockedReason ?? "Complete speaking/writing to continue.")
+        : null;
+
+  const comicPhaseAdvanceAction =
+    useComicLesson &&
+    currentPhase === "Exposure" &&
+    !canAdvanceCurrentPhase &&
+    firstIncompleteComicExposureKey &&
+    comicExposureGoToMissingIndex >= 0 ? (
+      <button
+        type="button"
+        className="lr-comic-gate-go button"
+        onClick={() => {
+          setComicExposureFocusKey(firstIncompleteComicExposureKey);
+          setComicExposureFocusRequest((n) => n + 1);
+        }}
+      >
+        Go to missing bubble
+      </button>
+    ) : null;
+
+  const getComicBubbleControls = useCallback(
+    (
+      bubble: ComicBubbleView,
+      ctx: { bubbleIndex: number; isFocused: boolean }
+    ): ComicBubbleControls => {
+      const speechTargetText = resolveComicBubbleSpeechTarget(bubble);
+      const completionKey =
+        bubble.completionKey || getComicBubbleCompletionKey(bubble.text);
+      const playText = bubble.playText || speechTargetText;
+
+      if (currentPhase === "Exposure") {
+        const sentenceForChunks = adaptiveLesson.sentences.find(
+          (s) => s.text === speechTargetText
+        );
+        const shadow =
+          exposureShadowBySentence[completionKey] ?? EXPOSURE_SHADOW_DEFAULT;
+        const showExposureSpeak = shouldShowComicBubbleSpeak({
+          phase: storyPhase,
+          bubble,
+          isFocused: ctx.isFocused,
+        });
+        const exposureStatusLabel = shadow.hasSpoken
+          ? "✓ Good"
+          : !exposureSttSupported
+            ? "Mic unavailable"
+            : null;
+        return {
+          sentenceKey: completionKey,
+          speechTargetText,
+          completionKey,
+          playText,
+          listenState: shadow.hasPlayedAudio ? "complete" : "default",
+          speakState: shadow.hasSpoken ? "complete" : "default",
+          showSpeak: showExposureSpeak,
+          feedbackSlot:
+            !ctx.isFocused && exposureStatusLabel ? (
+              <p
+                className="lr-comic-recording-status"
+                data-status={
+                  exposureStatusLabel === "✓ Good"
+                    ? "good"
+                    : exposureStatusLabel === "Mic unavailable"
+                      ? "mic-unavailable"
+                      : "not-tried"
+                }
+              >
+                {exposureStatusLabel}
+              </p>
+            ) : null,
+          speakSlot: showExposureSpeak ? (
+            <RecordingPanel
+              variant="compact"
+              key={`comic-exp-bubble-${completionKey}`}
+              expectedText={speechTargetText}
+              language={lesson.language}
+              mode="shadow"
+              complete={shadow.hasSpoken}
+              notifyOnFailure
+              onResult={(ok, _transcript, details) => {
+                if (sentenceForChunks) {
+                  recordSpeechAttemptForChunks(
+                    sentenceForChunks.words,
+                    ok,
+                    details?.matchPercent ?? 0,
+                    speechTargetText
+                  );
+                }
+                if (ok) {
+                  setExposureShadowBySentence((prev) =>
+                    mergeExposureShadow(prev, completionKey, { hasSpoken: true })
+                  );
+                  return;
+                }
+                sentenceForChunks?.words.forEach((word) => {
+                  recordSessionWeakChunk(word, "speech");
+                });
+              }}
+            />
+          ) : undefined,
+        };
+      }
+
+      if (currentPhase === "Breakdown") {
+        const sentence = findLessonSentenceForComicBubble(bubble, adaptiveLesson.sentences);
+        const sentenceKey = sentence?.text ?? completionKey;
+        const practice = comicBreakdownPracticeByKey[completionKey] ?? {};
+        const pronunciationChunks = sentence
+          ? buildPronunciationPracticeChunks(sentence, lesson.language)
+          : [];
+        const chunkPracticeOpen = sentence
+          ? showChunkPracticeBySentence[sentence.text] === true
+          : false;
+        const showBreakdownSpeak = shouldShowComicBubbleSpeak({
+          phase: storyPhase,
+          bubble,
+          isFocused: ctx.isFocused,
+        });
+        return {
+          sentenceKey,
+          speechTargetText,
+          completionKey,
+          playText,
+          listenState: practice.played ? "complete" : ctx.isFocused ? "active" : "default",
+          speakState: practice.spoken ? "complete" : ctx.isFocused ? "active" : "default",
+          showSpeak: showBreakdownSpeak,
+          speakSlot: showBreakdownSpeak ? (
+            <RecordingPanel
+              variant="compact"
+              key={`comic-bd-bubble-${completionKey}`}
+              expectedText={speechTargetText}
+              language={lesson.language}
+              mode="shadow"
+              complete={practice.spoken === true}
+              notifyOnFailure
+              onResult={(ok, _transcript, details) => {
+                setComicBreakdownPracticeByKey((prev) => ({
+                  ...prev,
+                  [completionKey]: { ...prev[completionKey], spoken: ok },
+                }));
+                if (sentence) {
+                  recordSpeechAttemptForChunks(
+                    sentence.words,
+                    ok,
+                    details?.matchPercent ?? 0,
+                    speechTargetText
+                  );
+                  if (!ok) {
+                    sentence.words.forEach((word) => {
+                      recordSessionWeakChunk(word, "speech");
+                    });
+                  }
+                }
+              }}
+            />
+          ) : undefined,
+          practiceDrawerSlot:
+            ctx.isFocused && sentence ? (
+              <div className="lr-comic-breakdown-panel">
+                <p className="lr-comic-breakdown-panel__translation muted">
+                  <strong>Translation:</strong> {sentence.translation}
+                </p>
+                {sentence.phonetic ? (
+                  <>
+                    <button
+                      type="button"
+                      className="lr-comic-btn lr-comic-btn--secondary"
+                      onClick={() => {
+                        if (showBreakdownPhoneticBySentence[sentence.text]) {
+                          setShowBreakdownPhoneticBySentence((prev) => ({
+                            ...prev,
+                            [sentence.text]: false,
+                          }));
+                          return;
+                        }
+                        setConfirmBreakdownPhoneticBySentence((prev) => ({
+                          ...prev,
+                          [sentence.text]: true,
+                        }));
+                      }}
+                    >
+                      {showBreakdownPhoneticBySentence[sentence.text]
+                        ? "Hide phonetic"
+                        : "Show phonetic"}
+                    </button>
+                    {confirmBreakdownPhoneticBySentence[sentence.text] &&
+                      !showBreakdownPhoneticBySentence[sentence.text] && (
+                        <p className="muted lr-comic-breakdown-panel__hint">
+                          Try speaking first?{" "}
+                          <button
+                            type="button"
+                            className="lr-comic-btn lr-comic-btn--secondary"
+                            onClick={() => {
+                              setShowBreakdownPhoneticBySentence((prev) => ({
+                                ...prev,
+                                [sentence.text]: true,
+                              }));
+                              setConfirmBreakdownPhoneticBySentence((prev) => ({
+                                ...prev,
+                                [sentence.text]: false,
+                              }));
+                              recordSentenceHelp(sentence, "phonetic");
+                            }}
+                          >
+                            Reveal anyway
+                          </button>
+                        </p>
+                      )}
+                    {showBreakdownPhoneticBySentence[sentence.text] && sentence.phonetic ? (
+                      <p className="muted">
+                        <strong>Phonetic:</strong> {sentence.phonetic}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+                {(sentence.contextNote || sentence.contextLabel) && (
+                  <button
+                    type="button"
+                    className="lr-comic-btn lr-comic-btn--secondary"
+                    onClick={() =>
+                      setShowContextNoteBySentence((prev) => ({
+                        ...prev,
+                        [sentence.text]: !prev[sentence.text],
+                      }))
+                    }
+                  >
+                    {showContextNoteBySentence[sentence.text]
+                      ? "Hide context note"
+                      : "Show context note"}
+                  </button>
+                )}
+                {showContextNoteBySentence[sentence.text] && sentence.contextNote ? (
+                  <p className="muted">{sentence.contextNote}</p>
+                ) : null}
+                <button
+                  type="button"
+                  className="lr-comic-btn lr-comic-btn--secondary"
+                  onClick={() =>
+                    setShowChunkPracticeBySentence((prev) => ({
+                      ...prev,
+                      [sentence.text]: !prev[sentence.text],
+                    }))
+                  }
+                >
+                  {chunkPracticeOpen
+                    ? "Hide chunk practice"
+                    : "Practice pronunciation by chunks"}
+                </button>
+                {chunkPracticeOpen ? (
+                  <ul className="lr-comic-chunk-practice">
+                    {pronunciationChunks.map((chunk) => {
+                      const chunkRecordKey = `${sentence.text}::${chunk.id}`;
+                      const showRecorder = Boolean(showChunkRecordingByKey[chunkRecordKey]);
+                      return (
+                        <li key={chunkRecordKey} className="lr-comic-chunk-practice__item">
+                          <p className="lr-comic-chunk-practice__label">
+                            <strong>{chunk.text}</strong>
+                            {chunk.phonetic ? (
+                              <span className="muted"> ({chunk.phonetic})</span>
+                            ) : null}
+                          </p>
+                          <div className="lr-comic-practice-drawer__actions lr-comic-chunk-practice__actions">
+                            <button
+                              type="button"
+                              className="lr-comic-btn lr-comic-btn--secondary"
+                              onClick={() => speakText(chunk.text, lesson.language, normalTtsRate)}
+                            >
+                              Play chunk
+                            </button>
+                            <button
+                              type="button"
+                              className="lr-comic-btn lr-comic-btn--secondary"
+                              onClick={() =>
+                                setShowChunkRecordingByKey((prev) => ({
+                                  ...prev,
+                                  [chunkRecordKey]: !prev[chunkRecordKey],
+                                }))
+                              }
+                            >
+                              {showRecorder ? "Hide mic" : "Speak chunk"}
+                            </button>
+                          </div>
+                          {showRecorder ? (
+                            <RecordingPanel
+                              variant="compact"
+                              key={chunkRecordKey}
+                              expectedText={chunk.text}
+                              language={lesson.language}
+                              mode="shadow"
+                              notifyOnFailure
+                              onResult={(ok, _transcript, details) => {
+                                if (sentence) {
+                                  recordSpeechAttemptForChunks(
+                                    sentence.words,
+                                    ok,
+                                    details?.matchPercent ?? 0,
+                                    chunk.text
+                                  );
+                                }
+                              }}
+                            />
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+                <ul className="lr-comic-breakdown-words muted">
+                  {filterPracticeChunks(sentence.words, {
+                    sentenceText: sentence.text,
+                    language: lessonChunkFilterLanguage(lesson.language),
+                  }).map((word) => (
+                    <li
+                      key={`${sentence.text}-${word.text}`}
+                      className="lr-comic-practice-chip"
+                    >
+                      {getBreakdownChunkDisplayText(
+                        word,
+                        lesson.language,
+                        chunkCategoryByText.get(word.text.toLowerCase())
+                      )}{" "}
+                      — {word.translation}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : ctx.isFocused ? (
+              <p className="muted lr-comic-breakdown-panel__hint">
+                Practice this line with Play and Speak below.
+              </p>
+            ) : null,
+        };
+      }
+
+      if (currentPhase === "Active Recall" && comicActiveRecallExercise && bubble.isActive) {
+        const exercise = comicActiveRecallExercise;
+        const exerciseId = exercise.id;
+        const voiceOk = comicArExerciseGate?.completedSections.includes("speaking") ?? false;
+        const isChecked = activeRecallChecked[exerciseId] === true;
+        const typingResult = activeRecallResults[exerciseId];
+        const typingComplete = typingResult?.status === "correct";
+        const speechEval = activeRecallSpeechByExercise[exerciseId];
+        const comicRetry = getComicBubbleRetryState({
+          typingChecked: isChecked,
+          typingStatus: typingResult?.status,
+          voiceComplete: voiceOk,
+          speechEvalOk: speechEval?.ok,
+        });
+        const arExpectedSpec = resolveActiveRecallExpectedAnswer({
+          type: exercise.type,
+          prompt: exercise.prompt,
+          expectedParts: exercise.expectedParts,
+          expectedPhoneticParts: exercise.expectedPhoneticParts,
+          targetChunks: exercise.targetChunks,
+          sentenceText: exercise.sentenceText,
+          lessonLanguage: lesson.language,
+        });
+        const arWrongAttempts = activeRecallWrongAttempts[exerciseId] ?? 0;
+        const arRevealAnswer = activeRecallRevealAnswer[exerciseId] === true;
+        const recallTask = resolveComicActiveRecallTask({
+          type: exercise.type,
+          prompt: exercise.prompt,
+          expectedParts: exercise.expectedParts,
+          sentenceText: exercise.sentenceText,
+          targetLanguage: lesson.language,
+          targetChunks: exercise.targetChunks,
+        });
+        const displayPrompt =
+          exercise.type === "contextual-fill-in"
+            ? exercise.prompt
+            : recallTask.taskType === "full-sentence-target"
+              ? recallTask.displayText
+              : recallTask.taskType === "chunk-meaning" || recallTask.taskType === "chunk-target"
+                ? recallTask.targetText ?? recallTask.displayText
+                : recallTask.displayText;
+        const showHighlightedSentence =
+          (recallTask.taskType === "chunk-meaning" || recallTask.taskType === "chunk-target") &&
+          recallTask.highlightSegments.some((segment) => segment.highlighted);
+        const speechTargetText = getExpectedSpeechText(exercise);
+        const playText =
+          recallTask.taskType === "chunk-meaning" || recallTask.taskType === "chunk-target"
+            ? recallTask.targetText ?? recallTask.displayText
+            : exercise.sentenceText?.trim() || bubble.speechTargetText;
+        const arAnswerHint = (
+          <ComicAnswerHint
+            spec={arExpectedSpec}
+            wrongAttempts={arWrongAttempts}
+            revealAnswer={arRevealAnswer}
+            onRevealAnswer={() =>
+              setActiveRecallRevealAnswer((prev) => ({ ...prev, [exerciseId]: true }))
+            }
+            typingChecked={isChecked}
+            typingStatus={typingResult?.status}
+          />
+        );
+        const arShowAnswerHints = shouldShowComicAnswerHints({
+          typingChecked: isChecked,
+          typingStatus: typingResult?.status,
+          wrongAttempts: arWrongAttempts,
+          revealAnswer: arRevealAnswer,
+        });
+        const blankParts = buildInlineBlankParts(
+          exercise.type === "contextual-fill-in" ? exercise.prompt : displayPrompt
+        );
+        const typedPlaceholder = getComicActiveRecallInputPlaceholder(
+          recallTask,
+          lesson.language
+        );
+        const displayPromptSlot = (
+          <div className="lr-comic-ar-prompt">
+            <p className="lr-comic-ar-prompt__instruction">{recallTask.instruction}</p>
+            {showHighlightedSentence ? (
+              <>
+                <p className="lr-comic-ar-prompt__context">
+                  {recallTask.highlightSegments.map((segment, index) =>
+                    segment.highlighted ? (
+                      <mark key={index} className="lr-comic-ar-target">
+                        {segment.text}
+                      </mark>
+                    ) : (
+                      <span key={index}>{segment.text}</span>
+                    )
+                  )}
+                </p>
+                {recallTask.taskType === "chunk-target" && recallTask.contextText ? (
+                  <p className="lr-comic-ar-prompt__line muted">{recallTask.contextText}</p>
+                ) : null}
+              </>
+            ) : (
+              <p className="lr-comic-ar-prompt__line">
+                {blankParts.hasBlank ? (
+                  <>
+                    <span>{blankParts.prefix}</span>
+                    <span className="lr-comic-ar-blank">____</span>
+                    <span>{blankParts.suffix}</span>
+                  </>
+                ) : (
+                  displayPrompt
+                )}
+              </p>
+            )}
+          </div>
+        );
+
+        return {
+          sentenceKey: exerciseId,
+          speechTargetText,
+          completionKey: exerciseId,
+          listenState: "active",
+          speakState: voiceOk ? "complete" : "active",
+          showSpeak: true,
+          playText,
+          speakSlot: (
+            <RecordingPanel
+              variant="compact"
+              key={`comic-ar-bubble-${exerciseId}-${comicRecordingRemountByExercise[exerciseId] ?? 0}`}
+              expectedText={speechTargetText}
+              acceptedSpokenTexts={
+                exercise.type === "chunk-to-meaning"
+                  ? (exercise.targetChunks[0]?.acceptedMeanings ?? undefined)
+                  : undefined
+              }
+              language={getActiveRecallAnswerLanguage(exercise, lesson.language)}
+              mode="answer"
+              answerInstruction={getActiveRecallSpeakingInstruction(
+                exercise.type,
+                lesson.language
+              )}
+              notifyOnFailure
+              suppressProgressionCallbacks={voiceOk}
+              complete={voiceOk}
+              onTypingFallbackNeeded={() =>
+                setActiveRecallTypeFallbackVisible((prev) => ({
+                  ...prev,
+                  [exerciseId]: true,
+                }))
+              }
+              onResult={(ok, _transcript, details) => {
+                const matchPercent = details?.matchPercent ?? 0;
+                setActiveRecallSpeechByExercise((prev) => ({
+                  ...prev,
+                  [exerciseId]: { ok, matchPercent },
+                }));
+                recordSpeechAttemptForChunks(
+                  exercise.targetChunks,
+                  ok,
+                  matchPercent,
+                  exercise.sentenceText
+                );
+                if (!ok) {
+                  exercise.targetChunks.forEach((chunk) => {
+                    recordSessionWeakChunk(chunk, "speech");
+                  });
+                  return;
+                }
+                setActiveRecallVoiceCorrect((prev) => ({
+                  ...prev,
+                  [exerciseId]: true,
+                }));
+                setActiveRecallInputs((prev) => ({
+                  ...prev,
+                  [exerciseId]: "",
+                }));
+              }}
+            />
+          ),
+          displayPrompt,
+          displayPromptSlot,
+          showInlineInput: true,
+          inlineInputValue: activeRecallInputs[exerciseId] ?? "",
+          onInlineInputChange: (value) =>
+            setActiveRecallInputs((prev) => ({ ...prev, [exerciseId]: value })),
+          onInlineInputKeyDown: (event) => {
+            if (event.key !== "Enter") {
+              return;
+            }
+            event.preventDefault();
+            if (typingComplete || !(activeRecallInputs[exerciseId] ?? "").trim()) {
+              return;
+            }
+            submitActiveRecallExerciseCheck(exercise, activeRecallInputs[exerciseId] ?? "");
+          },
+          inlineInputDisabled: shouldDisableComicInlineInput(typingResult?.status),
+          inlineInputPlaceholder: typedPlaceholder,
+          showCheck: true,
+          onCheck: () =>
+            submitActiveRecallExerciseCheck(exercise, activeRecallInputs[exerciseId] ?? ""),
+          checkDisabled: typingComplete || !(activeRecallInputs[exerciseId] ?? "").trim(),
+          checkState: typingComplete ? "complete" : "active",
+          feedbackSlot: (
+            <>
+              {typingResult ? (
+                <p
+                  className={
+                    typingResult.status === "correct"
+                      ? "feedback-correct"
+                      : typingResult.status === "partial"
+                        ? "feedback-correction"
+                        : "feedback-incorrect"
+                  }
+                >
+                  {typingResult.status === "correct"
+                    ? "✓ Good"
+                    : typingResult.status === "partial"
+                      ? "Partially correct"
+                      : "Try again"}
+                </p>
+              ) : speechEval?.ok === false && !voiceOk ? (
+                <p className="feedback-incorrect">Try again</p>
+              ) : null}
+              {arAnswerHint}
+            </>
+          ),
+          answerHintDrawerSlot:
+            arShowAnswerHints &&
+            recallTask.contextText &&
+            recallTask.contextText.length > 72
+              ? (
+                  <div className="lr-comic-practice-drawer__answer-hints">{arAnswerHint}</div>
+                )
+              : null,
+          showRetryButton: comicRetry.showRetryButton,
+          onRetry: comicRetry.retryKind
+            ? () => resetComicActiveRecallAttempt(exerciseId, comicRetry.retryKind!)
+            : undefined,
+          retryLabel:
+            comicRetry.retryKind === "speaking" ? "Try speaking again" : "Try again",
+        };
+      }
+
+      if (currentPhase === "Reinforcement" && currentReinforcementTarget && bubble.isActive) {
+        const target = currentReinforcementTarget;
+        const reinforcementSpeechTarget =
+          speechTargetText || resolveComicBubbleSpeechTarget(bubble) || target.text;
+        const showReinforcementSpeak = shouldShowComicBubbleSpeak({
+          phase: storyPhase,
+          bubble,
+          isFocused: ctx.isFocused,
+        });
+        const reinforcementRetry = getComicBubbleRetryState({
+          typingChecked: reinforcementResult != null,
+          typingStatus: reinforcementResult?.status,
+          voiceComplete: true,
+          speechEvalOk: undefined,
+        });
+        const rfExpectedSpec = resolveReinforcementExpectedAnswer({
+          text: target.text,
+          translation: target.translation,
+          expectedParts: target.expectedParts,
+          contextLabel: target.contextLabel,
+          lessonLanguage: lesson.language,
+        });
+        const rfWrongAttempts = reinforcementWrongAttempts[target.text] ?? 0;
+        const rfRevealAnswer = reinforcementRevealAnswer[target.text] === true;
+        const promptText = target.translation
+          ? `Translate: ${target.translation}`
+          : target.contextLabel
+            ? `Context: ${target.contextLabel}`
+            : `Type the ${getLanguageDisplayName(lesson.language)} translation.`;
+        const rfAnswerHint = (
+          <ComicAnswerHint
+            spec={rfExpectedSpec}
+            wrongAttempts={rfWrongAttempts}
+            revealAnswer={rfRevealAnswer}
+            onRevealAnswer={() =>
+              setReinforcementRevealAnswer((prev) => ({ ...prev, [target.text]: true }))
+            }
+            typingChecked={reinforcementResult != null}
+            typingStatus={reinforcementResult?.status}
+          />
+        );
+        const rfShowAnswerHints = shouldShowComicAnswerHints({
+          typingChecked: reinforcementResult != null,
+          typingStatus: reinforcementResult?.status,
+          wrongAttempts: rfWrongAttempts,
+          revealAnswer: rfRevealAnswer,
+        });
+
+        return {
+          sentenceKey: target.text,
+          speechTargetText: reinforcementSpeechTarget,
+          completionKey: target.text,
+          playText: reinforcementSpeechTarget,
+          listenState: "active",
+          showSpeak: showReinforcementSpeak,
+          speakSlot: showReinforcementSpeak ? (
+            <RecordingPanel
+              variant="compact"
+              key={`comic-rf-bubble-${target.text}`}
+              expectedText={reinforcementSpeechTarget}
+              language={lesson.language}
+              mode="shadow"
+              notifyOnFailure
+              onResult={(ok) => {
+                if (!ok) {
+                  recordSessionWeakChunk(
+                    { text: target.text, translation: target.translation },
+                    "speech"
+                  );
+                }
+              }}
+            />
+          ) : undefined,
+          displayPrompt: promptText,
+          showInlineInput: true,
+          inlineInputValue: reinforcementInput,
+          onInlineInputChange: setReinforcementInput,
+          onInlineInputKeyDown: (event) => {
+            if (event.key !== "Enter") {
+              return;
+            }
+            event.preventDefault();
+            if (reinforcementWriteGateOk || !reinforcementInput.trim()) {
+              return;
+            }
+            submitReinforcementTargetCheck();
+          },
+          inlineInputDisabled: reinforcementWriteGateOk,
+          inlineInputPlaceholder: `Type the ${getLanguageDisplayName(lesson.language)} translation`,
+          showCheck: true,
+          onCheck: submitReinforcementTargetCheck,
+          checkDisabled: reinforcementWriteGateOk || !reinforcementInput.trim(),
+          checkState: reinforcementWriteGateOk ? "complete" : "active",
+          feedbackSlot: (
+            <>
+              {reinforcementResult ? (
+                <p
+                  className={
+                    reinforcementResult.status === "correct"
+                      ? "feedback-correct"
+                      : reinforcementResult.status === "partial"
+                        ? "feedback-correction"
+                        : "feedback-incorrect"
+                  }
+                >
+                  {reinforcementResult.status === "correct"
+                    ? reinforcementWriteGateOk
+                      ? "Great work — reinforcement complete."
+                      : "✓ Good"
+                    : reinforcementResult.status === "partial"
+                      ? "Close — keep going."
+                      : "Try again"}
+                </p>
+              ) : null}
+              {rfAnswerHint}
+            </>
+          ),
+          answerHintDrawerSlot: rfShowAnswerHints ? (
+            <div className="lr-comic-practice-drawer__answer-hints">{rfAnswerHint}</div>
+          ) : null,
+          showRetryButton: reinforcementRetry.showRetryButton,
+          onRetry: reinforcementRetry.retryKind
+            ? () => {
+                setReinforcementResult(null);
+                if (typeof window !== "undefined") {
+                  window.requestAnimationFrame(() => focusComicInlineInput(target.text));
+                }
+              }
+            : undefined,
+        };
+      }
+
+      return {
+        listenState: bubble.isActive ? "active" : "default",
+        showSpeak: false,
+      };
+    },
+    [
+      activeRecallChecked,
+      activeRecallInputs,
+      activeRecallRevealAnswer,
+      activeRecallResults,
+      activeRecallSpeechByExercise,
+      activeRecallWrongAttempts,
+      adaptiveLesson.sentences,
+      comicActiveRecallExercise,
+      comicArExerciseGate?.completedSections,
+      comicRecordingRemountByExercise,
+      comicBreakdownPracticeByKey,
+      chunkCategoryByText,
+      confirmBreakdownPhoneticBySentence,
+      currentPhase,
+      currentReinforcementTarget,
+      exposureShadowBySentence,
+      exposureSttSupported,
+      lesson.language,
+      normalTtsRate,
+      recordSentenceHelp,
+      recordSessionWeakChunk,
+      recordSpeechAttemptForChunks,
+      reinforcementInput,
+      reinforcementRevealAnswer,
+      reinforcementResult,
+      reinforcementWrongAttempts,
+      reinforcementWriteGateOk,
+      resetComicActiveRecallAttempt,
+      showBreakdownPhoneticBySentence,
+      showChunkPracticeBySentence,
+      showChunkRecordingByKey,
+      showContextNoteBySentence,
+      storyPhase,
+      submitActiveRecallExerciseCheck,
+      submitReinforcementTargetCheck,
+    ]
+  );
+
+  const handleComicPlayText = useCallback(
+    (text: string) => {
+      const spoken = getComicBubbleSpeechTargetText(text);
+      speakText(spoken, lesson.language, normalTtsRate);
+      if (currentPhase === "Exposure") {
+        const completionKey = getComicBubbleCompletionKey(text);
+        setExposureShadowBySentence((prev) =>
+          mergeExposureShadow(prev, completionKey, { hasPlayedAudio: true })
+        );
+      }
+      if (currentPhase === "Breakdown") {
+        const completionKey = getComicBubbleCompletionKey(text);
+        setComicBreakdownPracticeByKey((prev) => ({
+          ...prev,
+          [completionKey]: { ...prev[completionKey], played: true },
+        }));
+      }
+    },
+    [currentPhase, lesson.language, normalTtsRate]
+  );
+
   const [savedVocabWordKeys, setSavedVocabWordKeys] = useState<Record<string, boolean>>(
     () => loadSavedVocabularyWordKeys()
   );
@@ -2026,18 +3426,25 @@ function getActiveRecallSpeakingInstruction(
     setConfirmBreakdownPhoneticBySentence({});
     setShowChunkPracticeBySentence({});
     setShowChunkRecordingByKey({});
+    setComicBreakdownPracticeByKey({});
     setActiveRecallQueue(seededActiveRecallExercises);
     setActiveRecallInputs({});
     setActiveRecallChecked({});
     setActiveRecallResults({});
     setActiveRecallTypeFallbackVisible({});
     setActiveRecallVoiceCorrect({});
+    setActiveRecallSpeechByExercise({});
+    setActiveRecallWrongAttempts({});
+    setActiveRecallRevealAnswer({});
+    setComicRecordingRemountByExercise({});
     setSessionWeakChunks({});
     setReinforcementTargets([]);
     setReinforcementUsesFallback(false);
     setReinforcementTargetIndex(0);
     setReinforcementInput("");
     setReinforcementResult(null);
+    setReinforcementWrongAttempts({});
+    setReinforcementRevealAnswer({});
     setExposureShadowBySentence({});
     previousPhaseRef.current = null;
     setPhaseIndex(0);
@@ -2052,7 +3459,14 @@ function getActiveRecallSpeakingInstruction(
       return;
     }
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- post-hydration recall seed only; must not reset phaseIndex */
-    setActiveRecallQueue(seededActiveRecallExercises);
+    setActiveRecallQueue((prev) => {
+      if (prev.length === 0) {
+        return seededActiveRecallExercises;
+      }
+      const prevIds = new Set(prev.map((exercise) => exercise.id));
+      const appended = seededActiveRecallExercises.filter((exercise) => !prevIds.has(exercise.id));
+      return appended.length > 0 ? [...prev, ...appended] : prev;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-seed when hydration boundary changes; do not tie to seeded identity.
   }, [hasMounted]);
 
@@ -2092,7 +3506,8 @@ function getActiveRecallSpeakingInstruction(
 
   return (
     <AppShell>
-    <div className="page">
+    <div className={`page${useComicLesson ? " lr-lesson-page--comic" : ""}`}>
+      <DeveloperModeActiveBanner />
       {continuationDirectUrlLock ? (
         <>
           <p className="muted" style={{ marginBottom: "0.75rem" }}>
@@ -2121,12 +3536,29 @@ function getActiveRecallSpeakingInstruction(
           ← Back to lessons
         </Link>
       </p>
-      <header className="card" style={{ marginBottom: "1rem", borderStyle: "solid" }}>
+      <header
+        className={`card lr-lesson-header${useComicLesson ? " lr-lesson-header--comic" : ""}`}
+        style={useComicLesson ? undefined : { marginBottom: "1rem", borderStyle: "solid" }}
+      >
         <p className="muted" style={{ marginTop: 0 }}>
           <strong>Module:</strong> {lesson.topic}
         </p>
-        <h1 style={{ margin: "0.25rem 0 0.5rem" }}>{lesson.title}</h1>
-        <p className="muted" style={{ marginBottom: scenarioContextNote ? "0.5rem" : 0 }}>
+        {lesson.tier || process.env.NODE_ENV === "development" ? (
+          <p className="muted" style={{ margin: "0.25rem 0" }}>
+            <strong>Tier:</strong> <LessonTierBadge tier={lesson.tier} />
+          </p>
+        ) : null}
+        <h1 style={useComicLesson ? undefined : { margin: "0.25rem 0 0.5rem" }}>
+          {lesson.title}
+        </h1>
+        <p
+          className={useComicLesson ? "muted lr-lesson-header__objective" : "muted"}
+          style={
+            useComicLesson
+              ? undefined
+              : { marginBottom: scenarioContextNote ? "0.5rem" : 0 }
+          }
+        >
           <strong>Objective:</strong> {lesson.objective}
         </p>
         {scenarioContextNote ? (
@@ -2135,6 +3567,59 @@ function getActiveRecallSpeakingInstruction(
           </p>
         ) : null}
       </header>
+      <div
+        className={
+          currentStoryScene
+            ? `lr-lesson-storybook lr-lesson-storybook--has-story${useComicLesson ? " lr-lesson-storybook--comic" : ""}`
+            : "lr-lesson-storybook"
+        }
+      >
+        {currentStoryScene && useComicLesson ? (
+          <LessonComicPanel
+            scene={comicDisplayScene ?? currentStoryScene}
+            lessonTitle={lesson.title}
+            tier={lessonStoryTier}
+            phase={storyPhase}
+            activeText={
+              useComicLesson &&
+              (currentPhase === "Exposure" || currentPhase === "Breakdown")
+                ? null
+                : comicActiveText
+            }
+            showVisualHint={showComicVisualHint}
+            showAllPanels={comicShowAllPanels}
+            visualHint={
+              showComicVisualHint
+                ? `Pista visual: ${currentStoryScene.semanticGoal}`
+                : null
+            }
+            onPlayText={handleComicPlayText}
+            getBubbleControls={getComicBubbleControls}
+            scorePercent={comicScorePercent}
+            scoreLabel={
+              currentPhase === "Active Recall" ? "Progreso" : "Puntuación"
+            }
+            phaseAdvanceNote={comicPhaseAdvanceNote}
+            phaseAdvanceActionSlot={comicPhaseAdvanceAction}
+            focusCompletionKey={
+              comicExposureFocusRequest > 0 ? comicExposureFocusKey : null
+            }
+            onFocusCompletionKeyHandled={() => {
+              setComicExposureFocusKey(null);
+              setComicExposureFocusRequest(0);
+            }}
+            panelNavResetKey={comicPanelNavResetKeyWithFocus}
+          />
+        ) : currentStoryScene ? (
+          <LessonStoryPanel
+            scene={currentStoryScene}
+            lessonTitle={lesson.title}
+            tier={lessonStoryTier}
+            phase={storyPhase}
+          />
+        ) : null}
+        {!useComicLesson ? (
+        <div className="lr-lesson-storybook-body">
       <section className="card">
         <h2>30-Minute Session Flow</h2>
         <p className="muted">Move through each phase in order.</p>
@@ -2163,6 +3648,11 @@ function getActiveRecallSpeakingInstruction(
             </span>
           ))}
         </div>
+        {lesson.tier || process.env.NODE_ENV === "development" ? (
+          <p className="muted">
+            <strong>Tier:</strong> <LessonTierBadge tier={lesson.tier} />
+          </p>
+        ) : null}
         <p className="muted">
           <strong>Topic status:</strong> {showHydratedProgress ? selectedTopicStatus : "Not started"}
         </p>
@@ -2174,7 +3664,11 @@ function getActiveRecallSpeakingInstruction(
       </section>
 
       {currentPhase === "Exposure" && (
-        <section className="card">
+        <section
+          className={
+            useComicLesson ? "card lr-comic-phase-secondary lr-comic-phase-compact" : "card"
+          }
+        >
           <h2>Exposure</h2>
           <p className="muted">
             Listen and read first. Use translation only when needed.
@@ -2182,7 +3676,7 @@ function getActiveRecallSpeakingInstruction(
           <p className="muted">Listen and repeat before continuing.</p>
           <ul className="sentence-list lesson-list">
             {adaptiveLesson.sentences.map((sentence) => {
-              const pronunciationChunks = buildPronunciationPracticeChunks(sentence);
+              const pronunciationChunks = buildPronunciationPracticeChunks(sentence, lesson.language);
               return (
               <li key={sentence.text}>
                 <p>
@@ -2203,7 +3697,7 @@ function getActiveRecallSpeakingInstruction(
                   <strong>Audio:</strong> {sentence.audioPlaceholder}
                 </p>
                 <div
-                  className="lr-tts-controls"
+                  className={`lr-tts-controls${useComicLesson ? " lr-comic-hide-primary" : ""}`}
                   style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.5rem" }}
                 >
                   <span className="muted">Listen (TTS):</span>
@@ -2254,31 +3748,33 @@ function getActiveRecallSpeakingInstruction(
                   </p>
                 ) : null}
                 {hasMounted && exposureSttSupported ? (
-                  <RecordingPanel
-                    key={sentence.text}
-                    expectedText={sentence.text}
-                    language={lesson.language}
-                    mode="shadow"
-                    complete={(exposureShadowBySentence[sentence.text] ?? EXPOSURE_SHADOW_DEFAULT).hasSpoken}
-                    notifyOnFailure
-                    onResult={(ok, _transcript, details) => {
-                      recordSpeechAttemptForChunks(
-                        sentence.words,
-                        ok,
-                        details?.matchPercent ?? 0,
-                        sentence.text
-                      );
-                      if (ok) {
-                        setExposureShadowBySentence((prev) =>
-                          mergeExposureShadow(prev, sentence.text, { hasSpoken: true })
+                  <div className={useComicLesson ? "lr-comic-hide-primary" : undefined}>
+                    <RecordingPanel
+                      key={sentence.text}
+                      expectedText={sentence.text}
+                      language={lesson.language}
+                      mode="shadow"
+                      complete={(exposureShadowBySentence[sentence.text] ?? EXPOSURE_SHADOW_DEFAULT).hasSpoken}
+                      notifyOnFailure
+                      onResult={(ok, _transcript, details) => {
+                        recordSpeechAttemptForChunks(
+                          sentence.words,
+                          ok,
+                          details?.matchPercent ?? 0,
+                          sentence.text
                         );
-                        return;
-                      }
-                      sentence.words.forEach((word) => {
-                        recordSessionWeakChunk(word, "speech");
-                      });
-                    }}
-                  />
+                        if (ok) {
+                          setExposureShadowBySentence((prev) =>
+                            mergeExposureShadow(prev, sentence.text, { hasSpoken: true })
+                          );
+                          return;
+                        }
+                        sentence.words.forEach((word) => {
+                          recordSessionWeakChunk(word, "speech");
+                        });
+                      }}
+                    />
+                  </div>
                 ) : null}
                 <div style={{ marginTop: "0.5rem" }}>
                   <button
@@ -2584,7 +4080,12 @@ function getActiveRecallSpeakingInstruction(
       )}
 
       {currentPhase === "Breakdown" && (
-        <section className="card">
+        <section
+          className={
+            useComicLesson ? "card lr-comic-phase-secondary lr-comic-phase-compact" : "card"
+          }
+        >
+          <div className={useComicLesson ? "lr-comic-hide-primary" : undefined}>
           <h2>Breakdown</h2>
           <ul className="sentence-list lesson-list">
             {adaptiveLesson.sentences.map((sentence) => (
@@ -2690,7 +4191,10 @@ function getActiveRecallSpeakingInstruction(
                   <strong>Words/Chunks:</strong>
                 </p>
                 <ul className="word-list">
-                  {sentence.words.map((word) => (
+                  {filterPracticeChunks(sentence.words, {
+                    sentenceText: sentence.text,
+                    language: lessonChunkFilterLanguage(lesson.language),
+                  }).map((word) => (
                     <li key={`${sentence.text}-${word.text}`}>
                       {(() => {
                         const displayText = getBreakdownChunkDisplayText(
@@ -2729,11 +4233,16 @@ function getActiveRecallSpeakingInstruction(
               </li>
             ))}
           </ul>
+          </div>
         </section>
       )}
 
       {currentPhase === "Active Recall" && (
-        <section className="card">
+        <section
+          className={
+            useComicLesson ? "card lr-comic-phase-secondary lr-comic-phase-compact" : "card"
+          }
+        >
           <h2>Active Recall</h2>
           <p className="muted">Complete the voice answer and typed answer to lock each exercise in.</p>
           <p className="muted">
@@ -2750,10 +4259,28 @@ function getActiveRecallSpeakingInstruction(
               activeRecallQueue.map((exercise, index) => {
                 const result = activeRecallResults[exercise.id];
                 const isChecked = activeRecallChecked[exercise.id] === true;
-                const voiceOk = activeRecallVoiceCorrect[exercise.id] === true;
+                const exerciseGate = getActiveRecallExerciseGateState({
+                  exerciseId: exercise.id,
+                  voiceMarkedCorrect: activeRecallVoiceCorrect[exercise.id] === true,
+                  typingStatus: result?.status,
+                  speechEvalOk: activeRecallSpeechByExercise[exercise.id]?.ok,
+                  speechMatchPercent: activeRecallSpeechByExercise[exercise.id]?.matchPercent ?? null,
+                });
+                const voiceOk = exerciseGate.completedSections.includes("speaking");
                 const fallbackTyping = activeRecallTypeFallbackVisible[exercise.id] === true;
-                const typedSuccess = result?.status === "correct";
+                const typedSuccess = exerciseGate.completedSections.includes("typing");
                 const answerLanguage = getActiveRecallAnswerLanguage(exercise, lesson.language);
+                const classicArExpectedSpec = resolveActiveRecallExpectedAnswer({
+                  type: exercise.type,
+                  prompt: exercise.prompt,
+                  expectedParts: exercise.expectedParts,
+                  expectedPhoneticParts: exercise.expectedPhoneticParts,
+                  targetChunks: exercise.targetChunks,
+                  sentenceText: exercise.sentenceText,
+                  lessonLanguage: lesson.language,
+                });
+                const classicArWrongAttempts = activeRecallWrongAttempts[exercise.id] ?? 0;
+                const classicArRevealAnswer = activeRecallRevealAnswer[exercise.id] === true;
                 return (
                   <div key={exercise.id} className="exercise-item">
                     <p className="muted">
@@ -2769,6 +4296,7 @@ function getActiveRecallSpeakingInstruction(
                     {exercise.type === "chunk-to-meaning" ? (
                       <p className="muted">Say the English meaning out loud, then type it.</p>
                     ) : null}
+                    <div className={useComicLesson ? "lr-comic-hide-primary" : undefined}>
                     <RecordingPanel
                       key={`${exercise.id}-voice`}
                       expectedText={getExpectedSpeechText(exercise)}
@@ -2782,6 +4310,7 @@ function getActiveRecallSpeakingInstruction(
                       answerInstruction={getActiveRecallSpeakingInstruction(exercise.type, lesson.language)}
                       notifyOnFailure
                       suppressProgressionCallbacks={voiceOk}
+                      complete={voiceOk}
                       onTypingFallbackNeeded={() =>
                         setActiveRecallTypeFallbackVisible((prev) => ({
                           ...prev,
@@ -2789,10 +4318,15 @@ function getActiveRecallSpeakingInstruction(
                         }))
                       }
                       onResult={(ok, _transcript, details) => {
+                        const matchPercent = details?.matchPercent ?? 0;
+                        setActiveRecallSpeechByExercise((prev) => ({
+                          ...prev,
+                          [exercise.id]: { ok, matchPercent },
+                        }));
                         recordSpeechAttemptForChunks(
                           exercise.targetChunks,
                           ok,
-                          details?.matchPercent ?? 0,
+                          matchPercent,
                           exercise.sentenceText
                         );
                         if (!ok) {
@@ -2805,7 +4339,8 @@ function getActiveRecallSpeakingInstruction(
                         setActiveRecallInputs((prev) => ({ ...prev, [exercise.id]: "" }));
                       }}
                     />
-                    <div className="muted" style={{ marginTop: "0.5rem" }}>
+                    </div>
+                    <div className={`muted${useComicLesson ? " lr-comic-hide-primary" : ""}`} style={{ marginTop: "0.5rem" }}>
                       <span>Speaking: {voiceOk ? "complete" : "not complete"}</span>
                       <span style={{ marginLeft: "0.75rem" }}>
                         Typing: {typedSuccess ? "complete" : "not complete"}
@@ -2816,7 +4351,10 @@ function getActiveRecallSpeakingInstruction(
                         Correct — now type it
                       </p>
                     ) : null}
-                    <div style={{ marginTop: "0.5rem" }}>
+                    <div
+                      className={useComicLesson ? "lr-comic-hide-primary" : undefined}
+                      style={{ marginTop: "0.5rem" }}
+                    >
                         <label className="muted" htmlFor={`ar-type-${exercise.id}`}>
                           {getActiveRecallTypingInstruction(exercise.type, lesson.language)}
                         </label>
@@ -2848,6 +4386,19 @@ function getActiveRecallSpeakingInstruction(
                             Check
                           </button>
                         </div>
+                        <ComicAnswerHint
+                          spec={classicArExpectedSpec}
+                          wrongAttempts={classicArWrongAttempts}
+                          revealAnswer={classicArRevealAnswer}
+                          onRevealAnswer={() =>
+                            setActiveRecallRevealAnswer((prev) => ({
+                              ...prev,
+                              [exercise.id]: true,
+                            }))
+                          }
+                          typingChecked={isChecked}
+                          typingStatus={result?.status}
+                        />
                     </div>
                     {isChecked && (
                       <button
@@ -2868,6 +4419,11 @@ function getActiveRecallSpeakingInstruction(
                             ...prev,
                             [exercise.id]: false,
                           }));
+                          setActiveRecallSpeechByExercise((prev) => {
+                            const next = { ...prev };
+                            delete next[exercise.id];
+                            return next;
+                          });
                           setActiveRecallTypeFallbackVisible((prev) => ({
                             ...prev,
                             [exercise.id]: false,
@@ -2947,7 +4503,11 @@ function getActiveRecallSpeakingInstruction(
       )}
 
       {currentPhase === "Reinforcement" && (
-        <section className="card">
+        <section
+          className={
+            useComicLesson ? "card lr-comic-phase-secondary lr-comic-phase-compact" : "card"
+          }
+        >
           <h2>Reinforcement</h2>
           <p className="muted">Review the chunks that need the most work.</p>
           {reinforcementUsesFallback ? (
@@ -2971,6 +4531,7 @@ function getActiveRecallSpeakingInstruction(
                     ? `Context: ${currentReinforcementTarget.contextLabel}`
                     : `Type the ${getLanguageDisplayName(lesson.language)} translation.`}
               </p>
+              <div className={useComicLesson ? "lr-comic-hide-primary" : undefined}>
               <input
                 className="text-input"
                 type="text"
@@ -2990,6 +4551,7 @@ function getActiveRecallSpeakingInstruction(
                 >
                   Check
                 </button>
+              </div>
               </div>
               {reinforcementResult ? (
                 <>
@@ -3036,6 +4598,10 @@ function getActiveRecallSpeakingInstruction(
         </section>
       )}
 
+        </div>
+        ) : null}
+      </div>
+
       <div className="lr-lesson-phase-bar">
         <section className="phase-controls" aria-label="Lesson phase navigation">
           <button
@@ -3049,27 +4615,16 @@ function getActiveRecallSpeakingInstruction(
           <button
             type="button"
             className="button"
-            onClick={() => {
-              setFinishNavigationMessage(null);
-              const phaseName = phases[phaseIndex];
-              if (isPhaseName(phaseName)) {
-                markPhaseComplete(lesson.language, lesson.id, phaseName);
-              }
-              if (!isFinalPhase) {
-                setPhaseIndex((prev) => prev + 1);
-              }
-            }}
+            onClick={handleAdvancePhase}
             disabled={!canAdvanceCurrentPhase}
           >
-            {!canAdvanceCurrentPhase && currentPhase === "Active Recall"
-              ? "Complete exercises first"
-              : !canAdvanceCurrentPhase && currentPhase === "Exposure"
-                ? "Listen and shadow each sentence first"
-                : !canAdvanceCurrentPhase && currentPhase === "Reinforcement"
-                  ? "Finish reinforcement targets first"
-                  : isFinalPhase
-                    ? "Finish"
-                : "Next"}
+            {!canAdvanceCurrentPhase && phaseAdvanceBlockedReason
+              ? phaseAdvanceBlockedReason
+              : !canAdvanceCurrentPhase
+                ? "Complete exercises first"
+                : isFinalPhase
+                  ? "Finish"
+                  : "Next"}
           </button>
           {finishNavigationMessage ? (
             <p className="muted" style={{ marginBottom: 0 }}>

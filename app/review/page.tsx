@@ -1,40 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { lessons, type LessonLanguage, type LessonWordType } from "@/lib/lesson-data";
+import { type LessonLanguage, type LessonWordType } from "@/lib/lesson-data";
+import {
+  buildLessonChunkMetadataMap,
+  getChunkHelpUsageKey,
+  getReviewIntervalMs,
+} from "@/lib/review-queue";
 import { useProgressStore } from "@/app/progress-store";
 import { normalizeText } from "@/lib/text-normalization";
 import { AppShell } from "@/app/AppShell";
 
-const REVIEW_NOW = new Date().getTime();
-
-function getReviewIntervalMs(timesCorrect: number, repetitionPriority: "high" | "medium" | "low"): number {
-  if (repetitionPriority === "high") {
-    if (timesCorrect <= 1) {
-      return 3 * 60 * 1000;
-    }
-    if (timesCorrect <= 3) {
-      return 20 * 60 * 1000;
-    }
-    return 2 * 60 * 60 * 1000;
-  }
-  if (repetitionPriority === "low") {
-    if (timesCorrect <= 1) {
-      return 30 * 60 * 1000;
-    }
-    if (timesCorrect <= 3) {
-      return 3 * 60 * 60 * 1000;
-    }
-    return 18 * 60 * 60 * 1000;
-  }
-  if (timesCorrect <= 1) {
-    return 10 * 60 * 1000;
-  }
-  if (timesCorrect <= 3) {
-    return 60 * 60 * 1000;
-  }
-  return 6 * 60 * 60 * 1000;
-}
+/** Fixed once per page load — matches prior Review queue behavior and stays render-pure. */
+const REVIEW_QUEUE_ANCHOR_MS = Date.now();
 
 function normalizeAnswer(value: string): string {
   return normalizeText(value);
@@ -76,39 +54,7 @@ export default function ReviewPage() {
   const [lockedItemsByKey, setLockedItemsByKey] = useState<Record<string, ReviewDisplayItem>>({});
   const [dismissedByKey, setDismissedByKey] = useState<Record<string, boolean>>({});
 
-  const chunkMetadataByText = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        repetitionPriority: "high" | "medium" | "low";
-        type: LessonWordType;
-        partOfSpeech: string;
-        translation: string;
-        phonetic?: string;
-        language: LessonLanguage;
-        context: string;
-      }
-    >();
-    lessons.forEach((oneLesson) => {
-      oneLesson.sentences.forEach((sentence) => {
-        sentence.words.forEach((word) => {
-          const key = `${oneLesson.language}::${word.text.toLowerCase()}`;
-          if (!map.has(key)) {
-            map.set(key, {
-              repetitionPriority: word.repetitionPriority,
-              type: word.type,
-              partOfSpeech: word.partOfSpeech,
-              translation: word.translation,
-              phonetic: word.phonetic,
-              language: oneLesson.language,
-              context: sentence.text,
-            });
-          }
-        });
-      });
-    });
-    return map;
-  }, []);
+  const chunkMetadataByText = useMemo(() => buildLessonChunkMetadataMap(), []);
 
   const reviewQueue = useMemo(() => {
     return Object.values(chunks)
@@ -128,7 +74,7 @@ export default function ReviewPage() {
         const lastPracticedMs = new Date(chunk.lastPracticed).getTime();
         const intervalMs = getReviewIntervalMs(chunk.timesCorrect, repetitionPriority);
 
-        return REVIEW_NOW - lastPracticedMs >= intervalMs;
+        return REVIEW_QUEUE_ANCHOR_MS - lastPracticedMs >= intervalMs;
       })
       .sort((a, b) => {
         const aPriority =
@@ -142,11 +88,11 @@ export default function ReviewPage() {
           return weight[aPriority] - weight[bPriority];
         }
         const aHelp =
-          (helpUsage[`${selectedLanguage}::chunk::${normalizeAnswer(a.text)}`]?.translationReveals ?? 0) +
-          (helpUsage[`${selectedLanguage}::chunk::${normalizeAnswer(a.text)}`]?.phoneticReveals ?? 0);
+          (helpUsage[getChunkHelpUsageKey(selectedLanguage, a.text)]?.translationReveals ?? 0) +
+          (helpUsage[getChunkHelpUsageKey(selectedLanguage, a.text)]?.phoneticReveals ?? 0);
         const bHelp =
-          (helpUsage[`${selectedLanguage}::chunk::${normalizeAnswer(b.text)}`]?.translationReveals ?? 0) +
-          (helpUsage[`${selectedLanguage}::chunk::${normalizeAnswer(b.text)}`]?.phoneticReveals ?? 0);
+          (helpUsage[getChunkHelpUsageKey(selectedLanguage, b.text)]?.translationReveals ?? 0) +
+          (helpUsage[getChunkHelpUsageKey(selectedLanguage, b.text)]?.phoneticReveals ?? 0);
         if (aHelp !== bHelp) {
           return bHelp - aHelp;
         }
@@ -266,10 +212,7 @@ export default function ReviewPage() {
                                     ...prev,
                                     [chunkKey]: false,
                                   }));
-                                  recordHelpReveal(
-                                    `${selectedLanguage}::chunk::${normalizeAnswer(item.text)}`,
-                                    "phonetic"
-                                  );
+                                  recordHelpReveal(getChunkHelpUsageKey(selectedLanguage, item.text), "phonetic");
                                 }}
                               >
                                 Reveal anyway

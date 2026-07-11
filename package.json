@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:lexeme-key": "tsx lib/lexeme-key.test.ts",
+    "test:chunk-normalizer": "tsx lib/chunk-normalizer.test.ts",
     "ingest:leipzig": "tsx scripts/data-ingestion/ingest-leipzig.ts",
     "ingest:gloss": "tsx scripts/gloss/parse_gloss.ts",
     "gloss:score": "tsx scripts/gloss/score_gloss.ts",
@@ -15,8 +17,15 @@
     "lessons:validate-batch": "tsx scripts/lessons/validate_new_batch.ts",
     "lessons:validate-continuation": "tsx scripts/lessons/validate_continuation.ts",
     "lessons:detect-gaps": "tsx scripts/lessons/detect_scenario_gaps.ts",
+    "verify:lesson-images": "tsx scripts/verify-lesson-images.ts",
+    "verify:lesson-chunks": "tsx scripts/verify-lesson-chunks.ts",
+    "verify:lesson-storyboards": "tsx scripts/verify-lesson-storyboards.ts",
+    "verify:concept-images": "tsx scripts/verify-concept-images.ts",
+    "verify:language-detect-sync": "tsx scripts/verify-language-detect-sync.ts",
     "speech:setup": "pip install -r scripts/speech/requirements.txt",
-    "translate:setup": "pip install -r scripts/translate/requirements.txt"
+    "translate:setup": "pip install -r scripts/translate/requirements.txt && python scripts/translate/install_argos_models.py",
+    "translate:verify": "python scripts/translate/install_argos_models.py --verify-only",
+    "translate:doctor": "tsx scripts/translate/doctor-cli.ts"
   },
   "dependencies": {
     "next": "16.2.4",

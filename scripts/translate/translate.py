@@ -2,50 +2,11 @@ import argparse
 import json
 import sys
 
-import argostranslate.package
-import argostranslate.translate
-
-NOT_INSTALLED_MSG = (
-    "Translation is not installed yet. Use Wiktionary lookup for word meanings."
-)
+from argos_support import NOT_INSTALLED_MSG, debug_log, ensure_translation_model, find_translation, translate_text
 
 
 def emit(payload: dict) -> None:
     print(json.dumps(payload, ensure_ascii=False))
-
-
-def find_translation(from_lang: str, to_lang: str):
-    installed_languages = argostranslate.translate.get_installed_languages()
-    source = next((lang for lang in installed_languages if lang.code == from_lang), None)
-    target = next((lang for lang in installed_languages if lang.code == to_lang), None)
-    if not source or not target:
-        return None
-    return source.get_translation(target)
-
-
-def ensure_translation_model(from_lang: str, to_lang: str) -> bool:
-    existing = find_translation(from_lang, to_lang)
-    if existing:
-        return True
-
-    try:
-        argostranslate.package.update_package_index()
-        available = argostranslate.package.get_available_packages()
-        pkg = next(
-            (
-                package
-                for package in available
-                if package.from_code == from_lang and package.to_code == to_lang
-            ),
-            None,
-        )
-        if not pkg:
-            return False
-        download_path = pkg.download()
-        argostranslate.package.install_from_path(download_path)
-        return find_translation(from_lang, to_lang) is not None
-    except Exception:
-        return False
 
 
 def main() -> int:
@@ -63,16 +24,29 @@ def main() -> int:
         emit({"ok": False, "error": "Missing text."})
         return 1
 
-    model_ready = ensure_translation_model(from_lang, to_lang)
-    if not model_ready:
+    pair = f"{from_lang} -> {to_lang}"
+    debug_log(
+        "translate_request",
+        text=text,
+        from_lang=from_lang,
+        to_lang=to_lang,
+        pair=pair,
+    )
+
+    if not ensure_translation_model(from_lang, to_lang):
+        debug_log("translate_failure", pair=pair, reason="model_not_installed")
         emit({"ok": False, "error": NOT_INSTALLED_MSG})
         return 1
 
+    debug_log("argos_pair", pair=pair, ready=find_translation(from_lang, to_lang) is not None)
+
     try:
-        translated = argostranslate.translate.translate(text, from_lang, to_lang)
+        translated = translate_text(text, from_lang, to_lang)
+        debug_log("translate_result", pair=pair, translation=translated)
         emit({"ok": True, "translation": translated})
         return 0
-    except Exception:
+    except Exception as error:
+        debug_log("translate_failure", pair=pair, reason=str(error))
         emit({"ok": False, "error": NOT_INSTALLED_MSG})
         return 1
 

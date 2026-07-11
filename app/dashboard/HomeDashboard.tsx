@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Inter } from "next/font/google";
 import { useEffect, useMemo, useState } from "react";
 import { useProgressStore } from "@/app/progress-store";
@@ -466,13 +467,17 @@ export default function HomeDashboard() {
               Quick practice
             </h2>
             <div className="practice-row">
-              <div className="db-practice db-practice--coming" aria-label="Quick recall, coming soon">
+              <Link
+                href="/practice/quick-recall"
+                className="db-practice"
+                aria-label="Quick recall, about five minutes"
+              >
                 <span className="db-practice-icon" aria-hidden>
                   ⚡
                 </span>
                 <h4>Quick recall</h4>
                 <span>~5 min</span>
-              </div>
+              </Link>
               <div className="db-practice db-practice--coming" aria-label="Word puzzles, coming soon">
                 <span className="db-practice-icon" aria-hidden>
                   🧩
@@ -502,9 +507,19 @@ export default function HomeDashboard() {
               <span className="db-emoji" aria-hidden>
                 🧠
               </span>{" "}
-              My words
+              Practice vocabulary
             </h2>
-            <p className="db-card-deck">Snapshot from the same progress store as the rest of the app.</p>
+            <p className="db-card-deck">
+              Counts mirror{" "}
+              <Link href="/progress" className="db-link-ghost">
+                Progress
+              </Link>{" "}
+              (Learn and Review). Highlights you save from Explore live on{" "}
+              <Link href="/my-words" className="db-link-ghost">
+                My Words
+              </Link>
+              — not pulled from extension storage yet.
+            </p>
             <div className="db-words-bento">
               <div className="db-words-brick">
                 <span className="db-words-brick-l">Core words (practice mastery)</span>
@@ -520,14 +535,20 @@ export default function HomeDashboard() {
               </div>
             </div>
             <p className="db-words-linkrow">
-              <Link href="/review" className="db-link-ghost">
-                Open review
+              <Link href="/progress" className="db-link-ghost">
+                Progress
               </Link>
               <span className="db-words-sep" aria-hidden>
                 ·
               </span>
-              <Link href="/progress" className="db-link-ghost">
-                Open progress
+              <Link href="/my-words" className="db-link-ghost">
+                My Words
+              </Link>
+              <span className="db-words-sep" aria-hidden>
+                ·
+              </span>
+              <Link href="/review" className="db-link-ghost">
+                Review
               </Link>
             </p>
           </section>
@@ -545,24 +566,39 @@ export default function HomeDashboard() {
 }
 
 function DashboardSidebar({ language, onLanguage }: { language: LessonLanguage; onLanguage: (l: LessonLanguage) => void }) {
+  const pathname = usePathname();
+
   return (
     <aside className="db-aside" aria-label="App navigation">
-      <LenguaRiverMark className="db-aside-brand" />
+      <Link
+        href="/"
+        className="db-aside-brand"
+        style={{ textDecoration: "none", color: "inherit" }}
+        aria-label="LenguaRiver home"
+      >
+        <LenguaRiverMark decorative variant="sidebar" />
+      </Link>
       <nav className="db-side-nav" aria-label="Main">
-        <Link className="db-snav" href="/" data-active="true" aria-current="page">
+        <Link className="db-snav" href="/" data-active={pathname === "/" ? "true" : "false"} aria-current={pathname === "/" ? "page" : undefined}>
           Home
         </Link>
-        <Link className="db-snav" href="/lesson">
+        <Link className="db-snav" href="/lesson" data-active={pathname === "/lesson" ? "true" : "false"}>
           Learn
         </Link>
-        <Link className="db-snav" href="/review">
+        <Link className="db-snav" href="/review" data-active={pathname === "/review" ? "true" : "false"}>
           Review
         </Link>
-        <Link className="db-snav" href="/progress">
-          My words
+        <Link className="db-snav" href="/my-words" data-active={pathname === "/my-words" ? "true" : "false"}>
+          My Words
         </Link>
-        <Link className="db-snav" href="/explore">
+        <Link className="db-snav" href="/progress" data-active={pathname === "/progress" ? "true" : "false"}>
+          Progress
+        </Link>
+        <Link className="db-snav" href="/explore" data-active={pathname === "/explore" ? "true" : "false"}>
           Explore
+        </Link>
+        <Link className="db-snav" href="/settings" data-active={pathname === "/settings" ? "true" : "false"}>
+          Settings
         </Link>
       </nav>
       <div className="db-snapshot db-snapshot--placeholder">
@@ -584,11 +620,6 @@ function DashboardSidebar({ language, onLanguage }: { language: LessonLanguage; 
         </select>
       </div>
       <p className="db-side-credit">Learner: <strong>Explorer</strong> (not linked to a profile yet)</p>
-      <div className="db-side-bottom">
-        <Link className="db-snav" href="/settings">
-          Settings
-        </Link>
-      </div>
     </aside>
   );
 }
@@ -610,17 +641,19 @@ function DashboardTopBar({
 }) {
   return (
     <header className="db-masthead">
-      <div className="db-masthead-text">
-        <h1>
-          <span className="db-emoji db-emoji--jumbo" aria-hidden>
-            👋
-          </span>{" "}
-          {clockGreeting} <span className="db-masthead-dot" aria-hidden>
-            ·
-          </span>{" "}
-          LenguaRiver
-        </h1>
-        <p className="db-masthead-sub">Structured lessons, review when due, and your own word memory.</p>
+      <div className="db-masthead-leading">
+        <Link href="/" className="db-masthead-brand" aria-label="LenguaRiver home">
+          <LenguaRiverMark decorative variant="wordmark" />
+        </Link>
+        <div className="db-masthead-text">
+          <h1>
+            <span className="db-emoji db-emoji--jumbo" aria-hidden>
+              👋
+            </span>{" "}
+            {clockGreeting}
+          </h1>
+          <p className="db-masthead-sub">Structured lessons, review when due, and your own word memory.</p>
+        </div>
       </div>
       <ul className="db-statbar" aria-label="Quick stats">
         <li>

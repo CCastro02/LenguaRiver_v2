@@ -10,7 +10,8 @@
  */
 "use client";
 
-const PASS_THRESHOLD = 70;
+export const PASS_THRESHOLD_PERCENT = 70;
+const PASS_THRESHOLD = PASS_THRESHOLD_PERCENT;
 
 const isDev = process.env.NODE_ENV === "development";
 

@@ -163,6 +163,17 @@ export function getTargetLocaleForLanguage(language: string): string {
   return (LANGUAGE_PREFERENCES[languageKey] ?? LANGUAGE_PREFERENCES.en).fallbackLocale;
 }
 
+/** Map short or regional tags to the BCP-47 locale used for card/lesson TTS (e.g. `es` → `es-ES`). */
+export function normalizeLanguageCodeForTts(language: string): string {
+  return getTargetLocaleForLanguage(language);
+}
+
+export function getMatchingVoicesForLanguage(language: string): SpeechSynthesisVoice[] {
+  const languageKey = getLanguageKey(language);
+  const voices = ensureVoiceInventoryReady();
+  return voices.filter((voice) => voiceMatchesLanguageBase(voice, languageKey));
+}
+
 /** True if at least one Spanish-capable system voice is listed (after async load). */
 export function hasSpanishSystemVoice(): boolean {
   const voices = ensureVoiceInventoryReady();
@@ -212,15 +223,14 @@ export function speakTextWithPreferredVoice(text: string, language: string, rate
   if (!synth) {
     return;
   }
-  const inputLanguage = language;
-  const languageKey = getLanguageKey(language);
+  const normalizedLanguage = normalizeLanguageCodeForTts(language);
+  const languageKey = getLanguageKey(normalizedLanguage);
   const utterance = new SpeechSynthesisUtterance(text);
-  const targetLocale = getTargetLocaleForLanguage(languageKey);
-  utterance.lang = targetLocale;
+  utterance.lang = normalizedLanguage;
   utterance.rate = rate;
 
   ensureVoiceInventoryReady();
-  const preferredVoice = getPreferredVoiceForLanguage(inputLanguage);
+  const preferredVoice = getPreferredVoiceForLanguage(normalizedLanguage);
 
   if (preferredVoice) {
     utterance.voice = preferredVoice;

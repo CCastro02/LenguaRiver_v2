@@ -1,14 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/app/AppShell";
 import { LENGUA_RIVER_PROGRESS_CLEARED_EVENT, resetLocalProgressStorage } from "@/lib/app-settings";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { ensureTtsVoicesLoaded, hasSpanishSystemVoice } from "@/lib/tts-voice";
+import { DeveloperModeActiveBanner, useDeveloperMode } from "@/lib/developer-mode";
+import { useLessonUiSettings } from "@/lib/useLessonUiSettings";
+import type { LessonDisplayMode } from "@/lib/user-lesson-settings";
 
 export default function SettingsPage() {
   const { settings, setSettings } = useAppSettings();
+  const { settings: lessonUiSettings, setSettings: setLessonUiSettings } = useLessonUiSettings();
+  const { enabled: developerModeEnabled, setEnabled: setDeveloperModeEnabled } = useDeveloperMode();
   const [spanishVoiceDetected, setSpanishVoiceDetected] = useState<boolean | null>(null);
+  const [lessonDisplaySaved, setLessonDisplaySaved] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
@@ -32,6 +39,15 @@ export default function SettingsPage() {
     [setSettings]
   );
 
+  const onLessonDisplayChange = useCallback(
+    (mode: LessonDisplayMode) => {
+      setLessonUiSettings({ lessonDisplayMode: mode });
+      setLessonDisplaySaved(true);
+      window.setTimeout(() => setLessonDisplaySaved(false), 2000);
+    },
+    [setLessonUiSettings]
+  );
+
   const onResetProgress = useCallback(() => {
     const ok = window.confirm(
       "Clear all saved practice progress on this device? Chunk memory, topic phases, and help usage will be removed. Settings and interest choice stay."
@@ -47,6 +63,12 @@ export default function SettingsPage() {
     <AppShell>
       <div className="page lr-settings-page">
         <h1>Settings</h1>
+        <nav className="lr-settings-links" aria-label="Settings sections">
+          <Link href="/settings/extension" className="db-link-ghost">
+            Extension
+          </Link>
+        </nav>
+        <DeveloperModeActiveBanner />
         <p className="muted">Preferences are saved in your browser (localStorage).</p>
 
         <section className="card lr-settings-card">
@@ -159,6 +181,47 @@ export default function SettingsPage() {
         </section>
 
         <section className="card lr-settings-card">
+          <h2>Lesson display</h2>
+          <p className="muted">Choose how lessons with a storyboard are presented.</p>
+          <fieldset className="lr-settings-fieldset">
+            <legend className="lr-settings-legend">Lesson display mode</legend>
+            <label className="lr-settings-radio">
+              <input
+                type="radio"
+                name="lessonDisplayMode"
+                checked={lessonUiSettings.lessonDisplayMode === "comic"}
+                onChange={() => onLessonDisplayChange("comic")}
+              />
+              <span>
+                <strong>Comic storybook</strong>
+                <span className="muted" style={{ display: "block", marginTop: "0.25rem" }}>
+                  Show lessons as an interactive comic when a storyboard is available.
+                </span>
+              </span>
+            </label>
+            <label className="lr-settings-radio">
+              <input
+                type="radio"
+                name="lessonDisplayMode"
+                checked={lessonUiSettings.lessonDisplayMode === "classic"}
+                onChange={() => onLessonDisplayChange("classic")}
+              />
+              <span>
+                <strong>Classic lesson view</strong>
+                <span className="muted" style={{ display: "block", marginTop: "0.25rem" }}>
+                  Use the original lesson cards and controls.
+                </span>
+              </span>
+            </label>
+          </fieldset>
+          {lessonDisplaySaved ? (
+            <p className="muted" role="status" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+              Saved
+            </p>
+          ) : null}
+        </section>
+
+        <section className="card lr-settings-card">
           <h2>Display</h2>
           <label className="lr-settings-toggle">
             <input
@@ -168,6 +231,21 @@ export default function SettingsPage() {
             />
             Show translations by default
           </label>
+        </section>
+
+        <section className="card lr-settings-card">
+          <h2>Developer</h2>
+          <label className="lr-settings-toggle">
+            <input
+              type="checkbox"
+              checked={developerModeEnabled}
+              onChange={(e) => setDeveloperModeEnabled(e.target.checked)}
+            />
+            Developer Mode
+          </label>
+          <p className="muted" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+            Unlock all lessons for demo/testing.
+          </p>
         </section>
 
         <section className="card lr-settings-card lr-settings-card--danger">

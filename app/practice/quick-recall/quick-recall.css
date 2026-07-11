@@ -1,0 +1,121 @@
+.quick-recall {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.quick-recall--topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--db-text-soft, #9ca3af);
+}
+
+.quick-recall--lang {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 8px;
+  border: 1px solid var(--db-border, #343944);
+  background: transparent;
+  color: inherit;
+}
+
+.quick-recall--bar-wrap {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.quick-recall--bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--db-accent, #7c3aed), #64748b);
+  transition: width 0.2s ease;
+}
+
+.quick-recall--instruction {
+  font-size: 0.76rem;
+  color: var(--db-text-soft, #94a3b8);
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quick-recall--cue {
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0 0 1rem;
+}
+
+.quick-recall--input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--db-border, #374151);
+  background: rgba(15, 23, 42, 0.45);
+  color: inherit;
+  margin-bottom: 0.6rem;
+}
+
+.quick-recall--input:disabled {
+  opacity: 0.55;
+}
+
+.quick-recall--actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.quick-recall--btn {
+  font-size: 0.9rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: var(--db-accent, #7c3aed);
+  color: white;
+}
+
+.quick-recall--btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.quick-recall--muted {
+  font-size: 0.78rem;
+  color: var(--db-text-soft, #94a3b8);
+}
+
+.quick-recall--feedback[data-status="correct"] {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.quick-recall--feedback[data-status="partial"] {
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+.quick-recall--feedback[data-status="incorrect"] {
+  color: #f87171;
+  font-weight: 500;
+}
+
+.quick-recall--empty-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.quick-recall--link {
+  color: inherit;
+}

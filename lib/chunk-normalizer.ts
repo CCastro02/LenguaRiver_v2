@@ -13,9 +13,16 @@ export type ChunkNormalizerOptions = {
 
 const PERSON_NAME_EXAMPLES = new Set([
   "ana",
+  "andres",
+  "andré",
   "carlos",
+  "leo",
+  "lucia",
+  "lucía",
+  "laura",
   "maría",
   "maria",
+  "mateo",
   "анна",
   "иван",
   "мария",
@@ -49,6 +56,27 @@ export function getExerciseSurfaceText(word: WithExerciseAnchor): string {
 
 function baseNormalize(text: string): string {
   return text.toLowerCase().trim();
+}
+
+function stripAccents(text: string): string {
+  return text.normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+function foldForMatch(text: string): string {
+  return stripAccents(baseNormalize(text));
+}
+
+function loosePhraseInSentence(sentenceText: string, phrase: string): boolean {
+  const sent = foldForMatch(sentenceText);
+  const phraseFolded = foldForMatch(stripEdgePunctuation(phrase));
+  if (!phraseFolded) {
+    return false;
+  }
+  return sent.includes(phraseFolded) || sent === phraseFolded;
+}
+
+function chunkAppearsInSentence(sentenceText: string, chunk: string): boolean {
+  return loosePhraseInSentence(sentenceText, chunk);
 }
 
 function stripEdgePunctuation(text: string): string {
@@ -202,10 +230,10 @@ export function validateChunk(sentenceText: string, chunk: string): boolean {
   const cLower = baseNormalize(chunkTrim);
   const hasPlaceholder = cLower.includes("___");
   const chunkInSentence =
-    sentTrim.toLowerCase().includes(chunkTrim.toLowerCase()) || chunkCoversFullSentence(sentTrim, chunkTrim);
+    chunkAppearsInSentence(sentTrim, chunkTrim) || chunkCoversFullSentence(sentTrim, chunkTrim);
 
   if (!hasPlaceholder && !ALLOWED_FIXED_PHRASES.has(cLower)) {
-    if (wordCount(chunkTrim) > 3) {
+    if (wordCount(chunkTrim) > 3 && !chunkInSentence) {
       return false;
     }
     if (wordCount(chunkTrim) > 2 && !chunkInSentence) {
@@ -215,7 +243,7 @@ export function validateChunk(sentenceText: string, chunk: string): boolean {
 
   if (sentTrim.length > 0 && chunkTrim.length / sentTrim.length > 0.6) {
     const wc = wordCount(chunkTrim);
-    if (wc > 2 && !hasPlaceholder && !chunkCoversFullSentence(sentTrim, chunkTrim)) {
+    if (wc > 2 && !hasPlaceholder && !chunkCoversFullSentence(sentTrim, chunkTrim) && !chunkInSentence) {
       return false;
     }
   }
@@ -223,93 +251,98 @@ export function validateChunk(sentenceText: string, chunk: string): boolean {
   return true;
 }
 
+function foldedSentence(sentence: string): string {
+  return foldForMatch(sentence);
+}
+
 function sentenceHasDondeEsta(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\b¿?d[oó]nde\s+est[aá]\b/.test(s);
+  return /\bdonde\s+esta\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasQuiero(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\bquiero\b/.test(s);
+  return /\bquiero\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasTiene(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\b¿?\s*tiene\b/.test(s);
+  return /\btiene\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasSoyDe(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\bsoy\s+de\b/.test(s);
+  return /\bsoy\s+de\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasDeDondeEres(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\b¿?\s*de\s+d[oó]nde\s+eres\b/.test(s);
+  return /\bde\s+donde\s+eres\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasNecesito(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\bnecesito\b/.test(s);
+  return /\bnecesito\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasMeSiento(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\bme\s+siento\b/.test(s);
+  return /\bme\s+siento\b/.test(foldedSentence(sentence));
 }
 
 function sentenceHasEstoy(sentence: string): boolean {
-  const s = baseNormalize(sentence);
-  return /\bestoy\b/.test(s);
+  return /\bestoy\b/.test(foldedSentence(sentence));
+}
+
+function sentenceHasCuantoCuesta(sentence: string): boolean {
+  return /\bcuanto\s+cuesta\b/.test(foldedSentence(sentence));
+}
+
+function chunkMatchesCuantoCuestaPrefix(chunk: string): boolean {
+  return /^(?:\?|¿)?\s*cuanto\s+cuesta\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesDondeEstaPrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^¿?\s*d[oó]nde\s+est[aá]\b/.test(c);
+  return /^(?:\?|¿)?\s*donde\s+esta\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesQuieroPrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^quiero\b/.test(c);
+  return /^quiero\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesTienePrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^¿?\s*tiene\b/.test(c);
+  return /^(?:\?|¿)?\s*tiene\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesSoyDePrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^soy\s+de\b/.test(c);
+  return /^soy\s+de\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesDeDondeEresPrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^¿?\s*de\s+d[oó]nde\s+eres\b/.test(c);
+  return /^(?:\?|¿)?\s*de\s+donde\s+eres\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesNecesitoPrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^necesito\b/.test(c);
+  return /^necesito\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesMeSientoPrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^me\s+siento\b/.test(c);
+  return /^me\s+siento\b/.test(foldedSentence(chunk));
 }
 
 function chunkMatchesEstoyPrefix(chunk: string): boolean {
-  const c = baseNormalize(chunk);
-  return /^estoy\b/.test(c);
+  return /^estoy\b/.test(foldedSentence(chunk));
 }
 
 function extractSpanFromSentence(sentenceText: string, chunk: string): string {
   const sent = sentenceText;
-  const idx = sent.toLowerCase().indexOf(chunk.toLowerCase().trim());
+  const needle = chunk.trim();
+  const idx = foldForMatch(sent).indexOf(foldForMatch(needle));
   if (idx === -1) {
-    return chunk.trim();
+    return needle;
   }
-  return sent.slice(idx, idx + chunk.trim().length);
+  const re = new RegExp(
+    needle
+      .split(/\s+/)
+      .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("\\s+"),
+    "iu"
+  );
+  const match = sent.match(re);
+  return match?.[0] ?? needle;
 }
 
 export type AutoFixChunkResult = {
@@ -338,6 +371,21 @@ export function autoFixChunk(
   }
 
   if (lang === "es" || lang === "default") {
+    if (sentenceHasCuantoCuesta(sent) && chunkMatchesCuantoCuestaPrefix(rawChunk)) {
+      const anchor = extractSpanFromSentence(sent, rawChunk);
+      const pattern = "¿cuánto cuesta ___?";
+      const anchorNorm = baseNormalize(anchor);
+      const chunkLooksLikeQuestion =
+        rawChunk.includes("?") || rawChunk.includes("___") || wordCount(rawChunk) >= 3;
+      const rewritePrice =
+        chunkLooksLikeQuestion || chunkCoversFullSentence(sent, rawChunk);
+      if (rewritePrice && (wordCount(sent) > 2 || rawChunk.includes("___"))) {
+        return {
+          text: pattern,
+          exerciseAnchorText: anchorNorm === baseNormalize(pattern) ? undefined : anchor,
+        };
+      }
+    }
     if (sentenceHasDondeEsta(sent) && chunkMatchesDondeEstaPrefix(rawChunk)) {
       const anchor = extractSpanFromSentence(sent, rawChunk);
       const chunkLooksLikeQuestion =
@@ -353,7 +401,12 @@ export function autoFixChunk(
         };
       }
     }
-    if (sentenceHasQuiero(sent) && chunkMatchesQuieroPrefix(rawChunk) && wordCount(rawChunk) > 2) {
+    if (
+      sentenceHasQuiero(sent) &&
+      chunkMatchesQuieroPrefix(rawChunk) &&
+      wordCount(rawChunk) > 2 &&
+      !/\bquiero\s+\S+\s+___/.test(foldedSentence(rawChunk))
+    ) {
       const anchor = extractSpanFromSentence(sent, rawChunk);
       const pattern = "quiero ___";
       const anchorNorm = baseNormalize(anchor);
@@ -418,7 +471,12 @@ export function autoFixChunk(
     }
   }
 
-  if (!validateChunk(sent, text) && chunkCoversFullSentence(sent, rawChunk) && wordCount(sent) > 2) {
+  if (
+    !validateChunk(sent, text) &&
+    chunkCoversFullSentence(sent, rawChunk) &&
+    wordCount(sent) > 2 &&
+    !sentenceHasDondeEsta(sent)
+  ) {
     const tokens = sent.split(/\s+/).filter(Boolean);
     const sub = tokens.slice(0, Math.min(3, tokens.length)).join(" ");
     const anchor = extractSpanFromSentence(sent, sub);
@@ -517,7 +575,7 @@ export function normalizeCoreWordsList(
  */
 export function processLessonWordChunk(
   sentenceText: string,
-  word: { text: string },
+  word: { text: string; exerciseAnchorText?: string },
   lessonMeta: { id: string; language: ChunkNormalizerLanguage }
 ): { text: string; exerciseAnchorText?: string } {
   const original = word.text;
@@ -531,13 +589,20 @@ export function processLessonWordChunk(
       ? fix.exerciseAnchorText
       : undefined;
 
-  logChunkNormalizationDev({
-    lessonId: lessonMeta.id,
-    sentence: sentenceText,
-    originalChunk: original,
-    normalizedChunk: nextText,
-    exerciseAnchorText: anchor,
-  });
+  const anchorUnchanged =
+    anchor === undefined ||
+    (word.exerciseAnchorText !== undefined &&
+      baseNormalize(anchor) === baseNormalize(word.exerciseAnchorText));
+  const textUnchanged = baseNormalize(original) === baseNormalize(nextText);
+  if (!textUnchanged || !anchorUnchanged || fix.warning) {
+    logChunkNormalizationDev({
+      lessonId: lessonMeta.id,
+      sentence: sentenceText,
+      originalChunk: original,
+      normalizedChunk: nextText,
+      exerciseAnchorText: anchor,
+    });
+  }
 
   if (fix.warning && process.env.NODE_ENV === "development") {
     console.warn("[chunk warning]", fix.warning, { lessonId: lessonMeta.id, sentence: sentenceText, chunk: original });
