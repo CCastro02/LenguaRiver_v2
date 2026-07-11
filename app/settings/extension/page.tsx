@@ -17,7 +17,7 @@ export default function ExtensionSettingsPage() {
         </p>
         <h1>Browser extension</h1>
         <p className="muted">
-          The Chrome extension is a separate package from this web app. Vercel deploys the app only—not
+          The browser extension is a separate package from this web app. Vercel deploys the app only—not
           the extension.
         </p>
 
@@ -29,26 +29,31 @@ export default function ExtensionSettingsPage() {
               Path: <code className="lr-settings-code">extensions/lenguariver-extension</code>
             </li>
             <li>
-              Build (from <code className="lr-settings-code">LenguaRiver/</code>):
+              Build target browsers (from <code className="lr-settings-code">LenguaRiver/</code>):
               <pre className="lr-settings-pre">
-                <code>cd extensions/lenguariver-extension{"\n"}npm run build</code>
+                <code>cd extensions/lenguariver-extension{"\n"}npm run check:target-browsers</code>
               </pre>
             </li>
             <li>
-              Load unpacked:{" "}
+              Chrome load unpacked:{" "}
               <code className="lr-settings-code">extensions/lenguariver-extension/.output/chrome-mv3</code>
+            </li>
+            <li>
+              Safari build output:{" "}
+              <code className="lr-settings-code">extensions/lenguariver-extension/.output/safari-mv2</code>
             </li>
           </ul>
         </section>
 
         <section className="card lr-settings-card">
-          <h2>Load in Chrome</h2>
+          <h2>Load for local testing</h2>
           <ol className="lr-settings-help-list lr-settings-help-list--ordered">
             <li>
-              Open <code className="lr-settings-code">chrome://extensions</code>
+              For Chrome, open <code className="lr-settings-code">chrome://extensions</code>
             </li>
             <li>Enable Developer mode</li>
             <li>Click Load unpacked and select the build folder above</li>
+            <li>For Safari, use Apple’s Safari Web Extension packaging/conversion flow from the Safari build output.</li>
           </ol>
         </section>
 
@@ -56,7 +61,7 @@ export default function ExtensionSettingsPage() {
           <h2>Automatic sync</h2>
           <p className="muted">
             Automatic sync works on configured LenguaRiver web origins. Local dev currently supports localhost:3000 and
-            localhost:3001. When the extension and My Words are open in the same Chrome profile on an allowed origin,
+            localhost:3001. When the extension and My Words are open in the same browser profile on an allowed origin,
             words saved with the extension can appear here automatically. If sync does not work, export JSON from the
             extension popup and import it on My Words. This is local browser sync only — not cloud sync. Custom uploaded
             card images stay on this device.
@@ -106,7 +111,7 @@ export default function ExtensionSettingsPage() {
         <section className="card lr-settings-card">
           <h2>Future</h2>
           <p className="muted" style={{ margin: 0 }}>
-            Chrome Web Store package or downloadable ZIP; optional cloud sync after auth and a shared backend.
+            Safari package first, Chrome package second; optional cloud sync after auth and a shared backend.
           </p>
         </section>
       </div>

@@ -32,5 +32,9 @@ assert.equal(resolveSaveLanguage("bonjour", "en").saveLanguage, "fr");
 assert.equal(resolveSaveLanguage("danke", "en").saveLanguage, "de");
 assert.equal(resolveSaveLanguage("ciao", "en").saveLanguage, "it");
 assert.equal(resolveSaveLanguage("nella casa", "en").saveLanguage, "it");
+assert.equal(resolveSaveLanguage("привет", "en").saveLanguage, "ru");
+assert.equal(resolveSaveLanguage("مرحبا", "en").saveLanguage, "ar");
+assert.equal(resolveSaveLanguage("こんにちは", "en").saveLanguage, "ja");
+assert.equal(resolveSaveLanguage("你好", "en").saveLanguage, "zh");
 
 console.log("language-detect.test.ts: ok");

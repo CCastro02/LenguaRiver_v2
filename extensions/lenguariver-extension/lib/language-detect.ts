@@ -1,6 +1,6 @@
 /**
  * Lightweight V1 language detection for highlighted text at save time.
- * Supported: en, es, fr, de, it, ru, ar — script/markers/wordlists + context fallback.
+ * Supported: en, es, fr, de, it, ru, ar, ja, zh — script/markers/wordlists + context fallback.
  *
  * @sync **Source of truth (shared core):** keep identical to
  * `LenguaRiver/lib/language-detect.ts` for everything through
@@ -19,6 +19,8 @@ export const DETECTABLE_LANGUAGES = [
   "it",
   "ru",
   "ar",
+  "ja",
+  "zh",
 ] as const;
 
 export type DetectableLanguage = (typeof DETECTABLE_LANGUAGES)[number];
@@ -35,6 +37,8 @@ export type LanguageDetectionResult = {
 
 const ARABIC_SCRIPT = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/u;
 const CYRILLIC_SCRIPT = /[\u0400-\u04FF]/u;
+const JAPANESE_SCRIPT = /[\u3040-\u309F\u30A0-\u30FF]/u;
+const CJK_IDEOGRAPH_SCRIPT = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/u;
 const SPANISH_MARKERS = /[ñáéíóúü¿¡]/iu;
 const GERMAN_MARKERS = /[äöüß]/iu;
 const GERMAN_UNIQUE_MARKERS = /[äöß]/iu;
@@ -496,6 +500,14 @@ export function resolveSelectedTextLanguage(
     return detectionResult("ru", "high", "selected", "cyrillic script");
   }
 
+  if (JAPANESE_SCRIPT.test(trimmed)) {
+    return detectionResult("ja", "high", "selected", "japanese kana script");
+  }
+
+  if (CJK_IDEOGRAPH_SCRIPT.test(trimmed)) {
+    return detectionResult("zh", "high", "selected", "cjk ideograph script");
+  }
+
   const hasSpanishMarkers = SPANISH_MARKERS.test(trimmed);
   const tokens = tokenize(trimmed);
   const baseScores = scoreWordlists(tokens);
@@ -597,6 +609,14 @@ export function resolveContextSentenceLanguage(contextSentence: string): Languag
 
   if (CYRILLIC_SCRIPT.test(trimmed)) {
     return detectionResult("ru", "high", "context", "cyrillic script in context");
+  }
+
+  if (JAPANESE_SCRIPT.test(trimmed)) {
+    return detectionResult("ja", "high", "context", "japanese kana script in context");
+  }
+
+  if (CJK_IDEOGRAPH_SCRIPT.test(trimmed)) {
+    return detectionResult("zh", "high", "context", "cjk ideograph script in context");
   }
 
   const hasSpanishMarkers = SPANISH_MARKERS.test(trimmed);

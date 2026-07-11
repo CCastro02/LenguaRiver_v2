@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:chrome": "wxt build --mode production --browser chrome",
+    "build:safari": "wxt build --mode production --browser safari",
     "zip": "wxt zip",
+    "zip:chrome": "wxt zip --browser chrome",
+    "zip:safari": "wxt zip --browser safari",
     "prepare": "wxt prepare",
     "check": "wxt build --mode production",
+    "check:target-browsers": "npm run build:chrome && npm run build:safari",
     "verify:language-detect-sync": "npm run verify:language-detect-sync --prefix ../.."
   },
   "devDependencies": {
