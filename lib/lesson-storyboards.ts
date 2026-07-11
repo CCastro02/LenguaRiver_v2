@@ -205,7 +205,131 @@ const REAL_SCENES: LessonSceneStep[] = [
   }),
 ];
 
+const CAFE_ORDERING_SCENES: LessonSceneStep[] = [
+  {
+    id: "cafe-1-meeting",
+    order: 1,
+    title: "Meeting at the café",
+    semanticGoal: "Greet a friend and answer a simple how-are-you question",
+    phaseKeys: ["exposure", "breakdown"],
+    hintStrength: "strong",
+    sourceType: "fallback",
+    comicLayout: "three_strip",
+    panels: [
+      {
+        speaker: "learner",
+        text: "Hola, Marco. ¿Cómo estás?",
+        bubbleStyle: "speech",
+        emphasis: "strong",
+        panelSlot: "panel-1",
+        placement: { x: 8, y: 14, width: 84 },
+      },
+      {
+        speaker: "stranger",
+        text: "Estoy bien, gracias. ¿Y tú?",
+        bubbleStyle: "speech",
+        panelSlot: "panel-2",
+        placement: { x: 8, y: 14, width: 84 },
+      },
+      {
+        speaker: "learner",
+        text: "Muy bien.",
+        bubbleStyle: "speech",
+        panelSlot: "panel-3",
+        placement: { x: 8, y: 18, width: 84 },
+      },
+    ],
+    sentenceKeys: [
+      "Hola, Marco. ¿Cómo estás?",
+      "Estoy bien, gracias. ¿Y tú?",
+      "Muy bien.",
+    ],
+  },
+  {
+    id: "cafe-2-ordering",
+    order: 2,
+    title: "Ordering coffee",
+    semanticGoal: "Order coffee politely with the pattern Quiero ___, por favor",
+    phaseKeys: ["breakdown", "active_recall"],
+    hintStrength: "strong",
+    sourceType: "fallback",
+    comicLayout: "three_strip",
+    panels: [
+      {
+        speaker: "stranger",
+        text: "Buenos días. ¿Qué quiere?",
+        bubbleStyle: "speech",
+        panelSlot: "panel-1",
+        placement: { x: 8, y: 14, width: 84 },
+      },
+      {
+        speaker: "learner",
+        text: "Quiero un café, por favor.",
+        bubbleStyle: "speech",
+        emphasis: "strong",
+        panelSlot: "panel-2",
+        placement: { x: 8, y: 14, width: 84 },
+      },
+      {
+        speaker: "stranger",
+        text: "Yo también, gracias.",
+        bubbleStyle: "speech",
+        panelSlot: "panel-3",
+        placement: { x: 8, y: 18, width: 84 },
+      },
+    ],
+    sentenceKeys: [
+      "Buenos días. ¿Qué quiere?",
+      "Quiero un café, por favor.",
+      "Yo también, gracias.",
+    ],
+  },
+  {
+    id: "cafe-3-receiving",
+    order: 3,
+    title: "Receiving the order",
+    semanticGoal: "Understand a handoff phrase and thank the barista",
+    phaseKeys: ["active_recall", "reinforcement"],
+    hintStrength: "strong",
+    sourceType: "fallback",
+    comicLayout: "three_strip",
+    panels: [
+      {
+        speaker: "stranger",
+        text: "Aquí tiene.",
+        bubbleStyle: "speech",
+        emphasis: "strong",
+        panelSlot: "panel-1",
+        placement: { x: 8, y: 14, width: 84 },
+      },
+      {
+        speaker: "learner",
+        text: "Muchas gracias.",
+        bubbleStyle: "speech",
+        panelSlot: "panel-2",
+        placement: { x: 8, y: 14, width: 84 },
+      },
+      {
+        speaker: "stranger",
+        text: "Está delicioso.",
+        bubbleStyle: "speech",
+        panelSlot: "panel-3",
+        placement: { x: 8, y: 18, width: 84 },
+      },
+    ],
+    sentenceKeys: ["Aquí tiene.", "Muchas gracias.", "Está delicioso."],
+  },
+];
+
 export const LESSON_STORYBOARDS: LessonStoryboard[] = [
+  {
+    lessonId: "es-cafe-ordering-v1",
+    tier: "easy",
+    module: "Café / Ordering",
+    characterSetId: "ana-marco-barista",
+    locationId: "cafe-counter",
+    scenes: CAFE_ORDERING_SCENES,
+  },
   {
     lessonId: "es-intro-coffee-stranger",
     tier: "easy",

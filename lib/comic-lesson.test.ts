@@ -59,6 +59,8 @@ const sampleScene: LessonSceneStep = {
 
 assert.equal(shouldUseComicLesson("es-intro-coffee-stranger", sampleScene), true);
 assert.equal(COMIC_LESSON_IDS.has("es-intro-coffee-stranger-02"), true);
+assert.equal(COMIC_LESSON_IDS.has("es-cafe-ordering-v1"), true);
+assert.equal(shouldUseComicLesson("es-cafe-ordering-v1", sampleScene), true);
 assert.equal(shouldUseComicLesson("es-intro-coffee-stranger", null), false);
 assert.equal(shouldUseComicLesson("other-lesson", sampleScene), false);
 
@@ -287,6 +289,7 @@ for (const board of [
   getLessonStoryboard("es-intro-coffee-stranger"),
   getLessonStoryboard("es-intro-coffee-stranger-02"),
   getLessonStoryboard("es-intro-coffee-stranger-03"),
+  getLessonStoryboard("es-cafe-ordering-v1"),
 ]) {
   assert.ok(board, "expected coffee storyboard");
   for (const scene of board!.scenes) {
@@ -419,6 +422,51 @@ for (const [tier, scenes] of Object.entries(COFFEE_SHOP_DIALOGUE)) {
       translation: word.translation,
     })),
   }), "perdón");
+}
+
+{
+  const cafeLesson = lessons.find((lesson) => lesson.id === "es-cafe-ordering-v1");
+  assert.ok(cafeLesson, "expected Spanish Café Scene lesson");
+  assert.equal(cafeLesson!.language, "es");
+  assert.equal(cafeLesson!.title, "At the Café");
+  assert.equal(cafeLesson!.topic, "Ordering Food");
+  assert.equal(cafeLesson!.tier, "easy");
+  assert.ok(
+    cafeLesson!.sentences.some((sentence) => sentence.text === "Quiero un café, por favor."),
+    "lesson should teach ordering coffee politely"
+  );
+  assert.ok(
+    cafeLesson!.coreWords.includes("quiero ___"),
+    "lesson should expose the reusable ordering pattern"
+  );
+  const allChunks = cafeLesson!.sentences
+    .flatMap((sentence) => sentence.words.map((word) => word.text.toLowerCase()));
+  for (const expectedChunk of [
+    "¿cómo estás?",
+    "estoy ___",
+    "quiero ___",
+    "por favor",
+    "aquí tiene",
+    "muchas gracias",
+  ]) {
+    assert.ok(allChunks.includes(expectedChunk), `missing café lesson chunk: ${expectedChunk}`);
+  }
+
+  const board = getLessonStoryboard("es-cafe-ordering-v1");
+  assert.ok(board, "expected Spanish Café Scene storyboard");
+  assert.equal(board!.scenes.length, 3);
+  assert.deepEqual(
+    board!.scenes.map((scene) => scene.id),
+    ["cafe-1-meeting", "cafe-2-ordering", "cafe-3-receiving"]
+  );
+  assert.ok(
+    board!.scenes.every((scene) => !scene.imageUrl),
+    "v1 should not require newly generated image assets"
+  );
+  assert.ok(
+    board!.scenes.some((scene) => scene.panels?.some((panel) => panel.text === "Quiero un café, por favor.")),
+    "storyboard should include the key ordering line"
+  );
 }
 
 function normalizeAnswer(text: string): string {

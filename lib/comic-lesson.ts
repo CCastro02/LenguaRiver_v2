@@ -5,6 +5,7 @@ export const COMIC_LESSON_IDS = new Set([
   "es-intro-coffee-stranger",
   "es-intro-coffee-stranger-02",
   "es-intro-coffee-stranger-03",
+  "es-cafe-ordering-v1",
 ]);
 
 export function shouldUseComicLesson(
