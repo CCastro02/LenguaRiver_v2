@@ -46,12 +46,21 @@ import {
 } from "@/lib/wild-word-language-cleanup";
 import { downloadMyWordsExportInBrowser } from "@/lib/wild-word-export";
 import { requestExtensionSync, subscribeToExtensionBridge } from "@/lib/extension-bridge";
+import { buildPastedTextWildWordRows } from "@/lib/pasted-text-capture";
 
 /** @see {@link CoercedWildWordRow} */
 export type StoredWildWordEntry = CoercedWildWordRow;
 
 const ENRICH_CONCURRENCY = 2;
 const EXTENSION_SYNC_TIMEOUT_MS = 3000;
+
+const PASTE_TARGET_LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "it", label: "Italian" },
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -166,8 +175,12 @@ export default function MyWordsClient() {
   const [enrichSummary, setEnrichSummary] = useState<string | null>(null);
   const [maintenanceSummary, setMaintenanceSummary] = useState<string | null>(null);
   const [languageCleanupSummary, setLanguageCleanupSummary] = useState<string | null>(null);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteTargetLanguage, setPasteTargetLanguage] = useState("en");
+  const [pasteSummary, setPasteSummary] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [errorById, setErrorById] = useState<Record<string, string>>({});
+
 
   const corpusMap = useMemo(() => buildLessonChunkMetadataMap(), []);
   const lexemeLookup = useMemo(() => buildLexemeLookup(corpusMap), [corpusMap]);
@@ -608,6 +621,32 @@ export default function MyWordsClient() {
     reader.readAsText(file);
   }
 
+  function savePastedTextWords() {
+    const source = pasteText.trim();
+    if (!source) {
+      setPasteSummary("Paste text first, then save detected words.");
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    const idPrefix = `paste-${Date.now()}`;
+    const rows = buildPastedTextWildWordRows(source, {
+      idPrefix,
+      nowIso,
+      targetLanguage: pasteTargetLanguage,
+      sourceTitle: "Pasted text",
+      sourceItemId: idPrefix,
+      maxCandidates: 24,
+    });
+    if (rows.length === 0) {
+      setPasteSummary("No clear vocabulary candidates found yet. Try a longer passage.");
+      return;
+    }
+    const result = importWildWordsFromExtensionJson(rows);
+    setPasteSummary(
+      `Saved ${result.imported} detected word${result.imported === 1 ? "" : "s"}, merged ${result.mergedDuplicates} duplicate${result.mergedDuplicates === 1 ? "" : "s"}.`
+    );
+  }
+
   const totalRecords = rawRows.length;
 
   return (
@@ -679,6 +718,61 @@ export default function MyWordsClient() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="card lr-my-words-paste-card">
+        <div className="lr-my-words-paste-head">
+          <div>
+            <h2>Paste text → save vocabulary</h2>
+            <p className="muted">
+              Paste an article, sentence, or paragraph. LenguaRiver detects likely vocabulary, routes each word to its
+              source-language list, and saves it here for review.
+            </p>
+          </div>
+          <label className="lr-my-words-target-label muted" htmlFor="paste-target-language">
+            Explanation language
+            <select
+              id="paste-target-language"
+              className="text-input lr-my-words-target-select"
+              value={pasteTargetLanguage}
+              onChange={(event) => setPasteTargetLanguage(event.target.value)}
+            >
+              {PASTE_TARGET_LANGUAGES.map((language) => (
+                <option key={language.value} value={language.value}>
+                  {language.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <textarea
+          className="text-input lr-my-words-paste-input"
+          value={pasteText}
+          onChange={(event) => setPasteText(event.target.value)}
+          placeholder="Paste text here, for example: Disculpe, mañana quiero café. I am learning web development."
+          rows={5}
+        />
+        <div className="lr-my-words-paste-actions">
+          <button type="button" className="button lr-my-words-pill-link" onClick={savePastedTextWords}>
+            Save detected words
+          </button>
+          <button
+            type="button"
+            className="button lr-my-words-pill-link"
+            disabled={!pasteText.trim()}
+            onClick={() => {
+              setPasteText("");
+              setPasteSummary(null);
+            }}
+          >
+            Clear
+          </button>
+        </div>
+        {pasteSummary ? (
+          <p className="lr-my-words-import-result muted" role="status" aria-live="polite">
+            {pasteSummary}
+          </p>
+        ) : null}
       </section>
 
       <section className="card">

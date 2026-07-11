@@ -461,6 +461,44 @@ main.container.container--dashboard {
   flex: none;
 }
 
+.lr-my-words-paste-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.lr-my-words-paste-head {
+  display: grid;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.lr-my-words-paste-head h2 {
+  margin: 0 0 0.35rem;
+}
+
+.lr-my-words-target-label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+}
+
+.lr-my-words-target-select {
+  min-width: 10rem;
+}
+
+.lr-my-words-paste-input {
+  width: 100%;
+  max-width: 100%;
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.lr-my-words-paste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 @media (min-width: 640px) {
   .lr-my-words-header {
     grid-template-columns: 1fr auto;
@@ -469,6 +507,10 @@ main.container.container--dashboard {
 
   .lr-my-words-links {
     justify-content: flex-end;
+  }
+
+  .lr-my-words-paste-head {
+    grid-template-columns: 1fr auto;
   }
 }
 
