@@ -8,8 +8,11 @@ import { promisify } from "node:util";
 
 import { NextResponse } from "next/server";
 
+import { extensionForAudioMimeType } from "@/lib/recorded-audio";
+
 const execFileAsync = promisify(execFile);
 const ALLOWED_LANGUAGES = new Set(["es", "ru", "en"]);
+const OPENAI_TRANSCRIPTION_MODEL = process.env.OPENAI_TRANSCRIPTION_MODEL ?? "whisper-1";
 
 type TranscriptionResponse =
   | {
@@ -37,17 +40,44 @@ function resolvePythonBin(): string {
   return "python";
 }
 
-export async function POST(request: Request) {
-  if (process.env.NODE_ENV === "production" && process.env.ENABLE_LOCAL_WHISPER !== "true") {
-    return NextResponse.json<TranscriptionResponse>(
-      {
-        ok: false,
-        error: "Local Whisper transcription is disabled in production.",
-      },
-      { status: 403 }
-    );
+async function transcribeWithOpenAI(audio: File, language: string): Promise<TranscriptionResponse> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return {
+      ok: false,
+      error: "Server transcription is not configured.",
+    };
   }
 
+  const form = new FormData();
+  const filename = audio.name || `recording${extensionForAudioMimeType(audio.type)}`;
+  form.append("file", audio, filename);
+  form.append("model", OPENAI_TRANSCRIPTION_MODEL);
+  form.append("language", language);
+
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+    },
+    body: form,
+  });
+  const data = (await response.json()) as { text?: string; error?: { message?: string } };
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: data.error?.message ?? `OpenAI transcription failed with HTTP ${response.status}.`,
+    };
+  }
+
+  return {
+    ok: true,
+    transcript: data.text?.trim() ?? "",
+    language,
+  };
+}
+
+export async function POST(request: Request) {
   let tempPath: string | null = null;
 
   try {
@@ -70,9 +100,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (process.env.NODE_ENV === "production" && process.env.ENABLE_LOCAL_WHISPER !== "true") {
+      const cloudResult = await transcribeWithOpenAI(audio, language);
+      return NextResponse.json<TranscriptionResponse>(cloudResult, {
+        status: cloudResult.ok ? 200 : 503,
+      });
+    }
+
     const tempDir = path.join(tmpdir(), "lenguariver-speech");
     await mkdir(tempDir, { recursive: true });
-    tempPath = path.join(tempDir, `${randomUUID()}.webm`);
+    tempPath = path.join(tempDir, `${randomUUID()}${extensionForAudioMimeType(audio.type)}`);
     await writeFile(tempPath, Buffer.from(await audio.arrayBuffer()));
 
     const scriptPath = path.join(process.cwd(), "scripts", "speech", "transcribe.py");

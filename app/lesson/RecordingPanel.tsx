@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { chooseRecordedAudioMimeType } from "@/lib/recorded-audio";
 import { isBrowserSpeechRecognitionSupported, useSpeechRecognition } from "./useSpeechRecognition";
 import {
   classifyToken,
@@ -710,7 +711,11 @@ export function RecordingPanel({
             recordedChunksRef.current = [];
             hasRecordedAudioBlobRef.current = chunks.length > 0;
             if (chunks.length > 0) {
-              const blob = new Blob(chunks, { type: "audio/webm" });
+              const mimeType = chooseRecordedAudioMimeType({
+                recorderMimeType: recorder.mimeType,
+                chunkTypes: chunks.map((chunk) => chunk.type),
+              });
+              const blob = new Blob(chunks, { type: mimeType });
               const url = URL.createObjectURL(blob);
               setRecordedAudioUrl((prev) => {
                 if (prev) {
