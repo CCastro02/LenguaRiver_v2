@@ -134,7 +134,7 @@ const BROWSER_STT_NO_TEXT_MSG =
   "Browser speech recognition did not hear any words. Check microphone permission/input, then try again or type it.";
 
 const TRANSCRIPTION_FAILED_MSG = "Transcription failed. You can type what you said.";
-const WEB_SPEECH_FINAL_GRACE_MS = 1000;
+const WEB_SPEECH_FINAL_GRACE_MS = 2000;
 const WHISPER_LOADING_GRACE_MS = 250;
 const WHISPER_REFINEMENT_MIN_GAIN = 5;
 const SILENT_RECORDING_MAX_LEVEL = 2;

@@ -117,7 +117,11 @@ export function useSpeechRecognition(lang: string) {
     const recognition = new Ctor();
     recognition.lang = browserSpeechRecognitionLocale(lang);
     recognition.continuous = false;
-    recognition.interimResults = false;
+    // Keep interim results on. In Chrome/PWA windows the final-only result can
+    // be empty if the learner taps Stop quickly, even though interim text was
+    // heard while they were speaking. We store the latest interim/final text in
+    // latestTranscriptRef and score it after Stop.
+    recognition.interimResults = true;
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
       hasReceivedSpeechRef.current = true;
       lastSpeechActivityRef.current = Date.now();
