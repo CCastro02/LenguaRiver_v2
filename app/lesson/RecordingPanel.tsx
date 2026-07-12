@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { chooseRecordedAudioMimeType } from "@/lib/recorded-audio";
-import { shouldStartBrowserSpeechRecognitionForDevice } from "@/lib/speech-recording-strategy";
+import {
+  shouldStartBrowserSpeechRecognitionForDevice,
+  shouldUseMediaRecorderForDevice,
+} from "@/lib/speech-recording-strategy";
 import { isBrowserSpeechRecognitionSupported, useSpeechRecognition } from "./useSpeechRecognition";
 import {
   classifyToken,
@@ -693,8 +696,15 @@ export function RecordingPanel({
 
     try {
       const mediaRecordingAvailable = isMediaRecordingSupported();
-      let startedMediaRecorder = false;
-      if (mediaRecordingAvailable) {
+      const deviceSpeechInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        maxTouchPoints: navigator.maxTouchPoints,
+        hasMediaRecording: mediaRecordingAvailable,
+        hasBrowserSpeechRecognition: browserStt,
+      };
+      const shouldUseMediaRecorder = shouldUseMediaRecorderForDevice(deviceSpeechInfo);
+      if (shouldUseMediaRecorder) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mediaStreamRef.current = stream;
@@ -738,7 +748,6 @@ export function RecordingPanel({
             mediaRecorderRef.current = null;
           };
           recorder.start();
-          startedMediaRecorder = true;
           setIsRecordingAudio(true);
         } catch {
           setMicError("Microphone access failed or recording is not supported.");
@@ -749,18 +758,14 @@ export function RecordingPanel({
           mediaRecorderRef.current = null;
           return;
         }
-      } else {
+      } else if (browserStt) {
         setIsRecordingAudio(true);
+      } else {
+        setMicError("Microphone speech recognition is not supported on this device.");
+        return;
       }
 
-      if (
-        shouldStartBrowserSpeechRecognitionForDevice({
-          userAgent: navigator.userAgent,
-          platform: navigator.platform,
-          maxTouchPoints: navigator.maxTouchPoints,
-          hasMediaRecording: startedMediaRecorder,
-        })
-      ) {
+      if (shouldStartBrowserSpeechRecognitionForDevice(deviceSpeechInfo)) {
         startListening();
       }
     } finally {
@@ -775,6 +780,7 @@ export function RecordingPanel({
     clearTranscript,
     transcribeRecordedAudio,
     finishWithTranscriptionFallback,
+    browserStt,
   ]);
 
   const onStop = useCallback(() => {

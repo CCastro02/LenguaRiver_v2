@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   isAppleMobileSpeechDevice,
   shouldStartBrowserSpeechRecognitionForDevice,
+  shouldUseMediaRecorderForDevice,
 } from "./speech-recording-strategy";
 
 const iphoneSafari = {
@@ -14,6 +15,7 @@ const iphoneSafari = {
   platform: "iPhone",
   maxTouchPoints: 5,
   hasMediaRecording: true,
+  hasBrowserSpeechRecognition: true,
 };
 
 const ipadDesktopMode = {
@@ -22,6 +24,7 @@ const ipadDesktopMode = {
   platform: "MacIntel",
   maxTouchPoints: 5,
   hasMediaRecording: true,
+  hasBrowserSpeechRecognition: true,
 };
 
 const desktopChrome = {
@@ -30,17 +33,26 @@ const desktopChrome = {
   platform: "Win32",
   maxTouchPoints: 0,
   hasMediaRecording: true,
+  hasBrowserSpeechRecognition: true,
 };
 
 assert.equal(isAppleMobileSpeechDevice(iphoneSafari), true);
 assert.equal(isAppleMobileSpeechDevice(ipadDesktopMode), true);
 assert.equal(isAppleMobileSpeechDevice(desktopChrome), false);
-assert.equal(shouldStartBrowserSpeechRecognitionForDevice(iphoneSafari), false);
-assert.equal(shouldStartBrowserSpeechRecognitionForDevice(ipadDesktopMode), false);
-assert.equal(shouldStartBrowserSpeechRecognitionForDevice(desktopChrome), true);
+
+assert.equal(shouldUseMediaRecorderForDevice(iphoneSafari), false);
+assert.equal(shouldUseMediaRecorderForDevice(ipadDesktopMode), false);
+assert.equal(shouldUseMediaRecorderForDevice(desktopChrome), true);
 assert.equal(
-  shouldStartBrowserSpeechRecognitionForDevice({ ...iphoneSafari, hasMediaRecording: false }),
+  shouldUseMediaRecorderForDevice({ ...iphoneSafari, hasBrowserSpeechRecognition: false }),
   true
+);
+assert.equal(shouldUseMediaRecorderForDevice({ ...desktopChrome, hasMediaRecording: false }), false);
+
+assert.equal(shouldStartBrowserSpeechRecognitionForDevice(iphoneSafari), true);
+assert.equal(
+  shouldStartBrowserSpeechRecognitionForDevice({ ...iphoneSafari, hasBrowserSpeechRecognition: false }),
+  false
 );
 
 console.log("speech-recording-strategy.test.ts: ok");
