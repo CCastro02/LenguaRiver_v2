@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 
 import {
+  browserSpeechRecognitionLocale,
   isAppleMobileSpeechDevice,
   shouldStartBrowserSpeechRecognitionForDevice,
   shouldUseMediaRecorderForDevice,
@@ -42,7 +43,7 @@ assert.equal(isAppleMobileSpeechDevice(desktopChrome), false);
 
 assert.equal(shouldUseMediaRecorderForDevice(iphoneSafari), false);
 assert.equal(shouldUseMediaRecorderForDevice(ipadDesktopMode), false);
-assert.equal(shouldUseMediaRecorderForDevice(desktopChrome), true);
+assert.equal(shouldUseMediaRecorderForDevice(desktopChrome), false);
 assert.equal(
   shouldUseMediaRecorderForDevice({ ...iphoneSafari, hasBrowserSpeechRecognition: false }),
   true
@@ -54,5 +55,10 @@ assert.equal(
   shouldStartBrowserSpeechRecognitionForDevice({ ...iphoneSafari, hasBrowserSpeechRecognition: false }),
   false
 );
+
+assert.equal(browserSpeechRecognitionLocale("es"), "es-ES");
+assert.equal(browserSpeechRecognitionLocale("en"), "en-US");
+assert.equal(browserSpeechRecognitionLocale("ru"), "ru-RU");
+assert.equal(browserSpeechRecognitionLocale("de-DE"), "de-DE");
 
 console.log("speech-recording-strategy.test.ts: ok");

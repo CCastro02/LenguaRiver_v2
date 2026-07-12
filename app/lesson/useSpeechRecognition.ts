@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { browserSpeechRecognitionLocale } from "@/lib/speech-recording-strategy";
 
 const SILENCE_MS = 4000;
 const SILENCE_TICK_MS = 300;
@@ -114,7 +115,7 @@ export function useSpeechRecognition(lang: string) {
     setRecognitionError(null);
 
     const recognition = new Ctor();
-    recognition.lang = lang;
+    recognition.lang = browserSpeechRecognitionLocale(lang);
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.onresult = (event: SpeechRecognitionEventLike) => {

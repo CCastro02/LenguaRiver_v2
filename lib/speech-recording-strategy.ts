@@ -24,11 +24,12 @@ export function shouldUseMediaRecorderForDevice(input: SpeechRecordingDeviceInfo
     return false;
   }
 
-  // On iPhone/iPad Safari/PWA, running Web Speech recognition and MediaRecorder
-  // at the same time can leave the UI stuck in the recording state. Chris wants
-  // no paid/cloud transcription, so prefer the older/free browser recognition
-  // path on Apple mobile when the browser exposes it.
-  if (input.hasBrowserSpeechRecognition && isAppleMobileSpeechDevice(input)) {
+  // Chris does not want paid/cloud transcription right now. When the browser
+  // can do speech recognition, use that direct/free path instead of recording
+  // audio for server transcription. This also avoids Chrome/Safari conflicts
+  // where MediaRecorder can grab the mic and leave browser recognition with no
+  // usable transcript.
+  if (input.hasBrowserSpeechRecognition) {
     return false;
   }
 
@@ -39,4 +40,17 @@ export function shouldStartBrowserSpeechRecognitionForDevice(
   input: SpeechRecordingDeviceInfo
 ): boolean {
   return Boolean(input.hasBrowserSpeechRecognition ?? true);
+}
+
+export function browserSpeechRecognitionLocale(language: string): string {
+  switch (language) {
+    case "es":
+      return "es-ES";
+    case "en":
+      return "en-US";
+    case "ru":
+      return "ru-RU";
+    default:
+      return language;
+  }
 }
