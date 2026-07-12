@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { chooseRecordedAudioMimeType } from "@/lib/recorded-audio";
 import {
+  isAppleMobileSpeechDevice,
   shouldStartBrowserSpeechRecognitionForDevice,
   shouldUseMediaRecorderForDevice,
 } from "@/lib/speech-recording-strategy";
@@ -246,6 +247,7 @@ export function RecordingPanel({
   const startingRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const sttTypedFallbackInputRef = useRef<HTMLInputElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioLevelAnimationRef = useRef<number | null>(null);
   const maxAudioLevelRef = useRef(0);
@@ -269,6 +271,15 @@ export function RecordingPanel({
   const browserStt =
     hasMounted && isBrowserSpeechRecognitionSupported() && isSupported;
   const mediaRecordingSupported = hasMounted && isMediaRecordingSupported();
+  const appleMobileSpeechDevice =
+    hasMounted &&
+    isAppleMobileSpeechDevice({
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      maxTouchPoints: navigator.maxTouchPoints,
+      hasMediaRecording: mediaRecordingSupported,
+      hasBrowserSpeechRecognition: browserStt,
+    });
   const shouldShowNetworkFallback =
     recognitionError === "network" && !isTranscribing && !whisperTranscript.trim();
   const showSttTypedFallbackPanel =
@@ -1161,10 +1172,27 @@ export function RecordingPanel({
               {sttFallbackGuidanceText}
             </p>
           ) : null}
+          {appleMobileSpeechDevice ? (
+            <div className="muted" style={{ marginBottom: "0.5rem" }}>
+              <p style={{ margin: "0 0 0.35rem" }}>
+                On iPhone, use Apple Dictation here: tap the box, tap the keyboard microphone,
+                say the sentence, then tap <strong>Use typed text</strong>.
+              </p>
+              <button
+                type="button"
+                className="button"
+                onClick={() => sttTypedFallbackInputRef.current?.focus()}
+                disabled={interactionDisabled || isRecordingAudio || isTranscribing}
+              >
+                Use iPhone Dictation
+              </button>
+            </div>
+          ) : null}
           <label className="muted" htmlFor="lr-stt-typed-fallback" style={{ display: "block" }}>
             Type what you said
           </label>
           <input
+            ref={sttTypedFallbackInputRef}
             id="lr-stt-typed-fallback"
             className="text-input"
             type="text"
