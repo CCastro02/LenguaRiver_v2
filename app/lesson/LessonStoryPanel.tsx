@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { LessonSceneStep, LessonStoryPhase, LessonStoryTier } from "@/lib/lesson-storyboard-types";
+import { buildTextSceneCard } from "@/lib/text-scene-card";
 
 export type LessonStoryPanelProps = {
   scene: LessonSceneStep | null;
@@ -23,7 +24,12 @@ export function LessonStoryPanel({ scene, lessonTitle, tier, phase }: LessonStor
   }
 
   const caption = scene.title ?? scene.semanticGoal;
-  const imageAlt = scene.title ? `${scene.title}: ${scene.semanticGoal}` : scene.semanticGoal;
+  const textSceneCard = buildTextSceneCard(scene, lessonTitle);
+  const imageAlt = scene.imageUrl
+    ? scene.title
+      ? `${scene.title}: ${scene.semanticGoal}`
+      : scene.semanticGoal
+    : textSceneCard.ariaLabel;
 
   // TODO: user settings — story images on/off; data-story-mode: standard | immersive | compact
   return (
@@ -48,9 +54,16 @@ export function LessonStoryPanel({ scene, lessonTitle, tier, phase }: LessonStor
             />
           ) : (
             <div className="lr-lesson-story-placeholder" role="img" aria-label={imageAlt}>
-              <span className="lr-lesson-story-placeholder-icon" aria-hidden="true">
-                ☕
-              </span>
+              <div className="lr-comic-scene-card lr-comic-scene-card--story">
+                <span className="lr-comic-scene-card__icon" aria-hidden="true">
+                  {textSceneCard.icon}
+                </span>
+                <span className="lr-comic-scene-card__eyebrow">{textSceneCard.eyebrow}</span>
+                <strong className="lr-comic-scene-card__title">{textSceneCard.title}</strong>
+                <span className="lr-comic-scene-card__description">
+                  {textSceneCard.description}
+                </span>
+              </div>
             </div>
           )}
         </div>

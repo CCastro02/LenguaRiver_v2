@@ -1642,9 +1642,54 @@ a.db-practice:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3.5rem;
-  opacity: 0.45;
-  background: linear-gradient(180deg, #faf6ee 0%, #efe6d8 100%);
+  padding: clamp(1rem, 4vw, 2rem);
+  background:
+    radial-gradient(circle at 22% 20%, rgba(251, 191, 36, 0.22) 0%, transparent 26%),
+    radial-gradient(circle at 78% 72%, rgba(180, 83, 9, 0.14) 0%, transparent 30%),
+    linear-gradient(180deg, #faf6ee 0%, #efe6d8 100%);
+}
+
+.home-dashboard .db-main .page .lr-comic-scene-card {
+  display: grid;
+  gap: 0.35rem;
+  place-items: center;
+  max-width: min(78%, 480px);
+  padding: clamp(0.85rem, 2.8vw, 1.35rem);
+  color: #201712;
+  text-align: center;
+  background: rgba(255, 251, 245, 0.86);
+  border: 2px solid rgba(42, 32, 24, 0.28);
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(42, 32, 24, 0.16);
+}
+
+.home-dashboard .db-main .page .lr-comic-scene-card__icon {
+  font-size: clamp(2rem, 7vw, 4rem);
+  line-height: 1;
+}
+
+.home-dashboard .db-main .page .lr-comic-scene-card__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(120, 53, 15, 0.78);
+}
+
+.home-dashboard .db-main .page .lr-comic-scene-card__title {
+  font-size: clamp(1.05rem, 3vw, 1.45rem);
+  line-height: 1.15;
+}
+
+.home-dashboard .db-main .page .lr-comic-scene-card__description {
+  max-width: 34rem;
+  font-size: clamp(0.82rem, 2.1vw, 0.98rem);
+  line-height: 1.35;
+  color: rgba(42, 32, 24, 0.78);
+}
+
+.home-dashboard .db-main .page .lr-comic-scene-card--story {
+  max-width: min(84%, 540px);
 }
 
 .home-dashboard .db-main .page .lr-comic-bubbles {
