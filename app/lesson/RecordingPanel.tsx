@@ -134,6 +134,7 @@ const TRANSCRIPTION_FAILED_MSG = "Transcription failed. You can type what you sa
 const WEB_SPEECH_FINAL_GRACE_MS = 150;
 const WHISPER_LOADING_GRACE_MS = 250;
 const WHISPER_REFINEMENT_MIN_GAIN = 5;
+const SILENT_RECORDING_MAX_LEVEL = 2;
 
 type SpeechCheckDetails = {
   matchPercent: number;
@@ -242,6 +243,9 @@ export function RecordingPanel({
   const startingRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioLevelAnimationRef = useRef<number | null>(null);
+  const maxAudioLevelRef = useRef(0);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordedUrlForCleanupRef = useRef<string | null>(null);
   const hasAnnouncedTypingFallbackRef = useRef(false);
@@ -304,6 +308,51 @@ export function RecordingPanel({
     recordedUrlForCleanupRef.current = recordedAudioUrl;
   }, [recordedAudioUrl]);
 
+  const stopAudioLevelMonitor = useCallback(() => {
+    if (audioLevelAnimationRef.current !== null) {
+      cancelAnimationFrame(audioLevelAnimationRef.current);
+      audioLevelAnimationRef.current = null;
+    }
+    const audioContext = audioContextRef.current;
+    audioContextRef.current = null;
+    if (audioContext) {
+      void audioContext.close().catch(() => undefined);
+    }
+  }, []);
+
+  const startAudioLevelMonitor = useCallback(
+    (stream: MediaStream) => {
+      stopAudioLevelMonitor();
+      maxAudioLevelRef.current = 0;
+      const AudioContextCtor = window.AudioContext;
+      if (!AudioContextCtor) {
+        return;
+      }
+      try {
+        const audioContext = new AudioContextCtor();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        audioContext.createMediaStreamSource(stream).connect(analyser);
+        const samples = new Uint8Array(analyser.fftSize);
+        audioContextRef.current = audioContext;
+
+        const sample = () => {
+          analyser.getByteTimeDomainData(samples);
+          let peak = 0;
+          for (const value of samples) {
+            peak = Math.max(peak, Math.abs(value - 128));
+          }
+          maxAudioLevelRef.current = Math.max(maxAudioLevelRef.current, peak);
+          audioLevelAnimationRef.current = requestAnimationFrame(sample);
+        };
+        sample();
+      } catch {
+        stopAudioLevelMonitor();
+      }
+    },
+    [stopAudioLevelMonitor]
+  );
+
   useEffect(() => {
     return () => {
       if (browserFastCheckTimeoutRef.current) {
@@ -314,6 +363,7 @@ export function RecordingPanel({
         clearTimeout(whisperLoadingTimeoutRef.current);
         whisperLoadingTimeoutRef.current = null;
       }
+      stopAudioLevelMonitor();
       stopListening();
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         try {
@@ -334,7 +384,7 @@ export function RecordingPanel({
       }
       recordedUrlForCleanupRef.current = null;
     };
-  }, [stopListening]);
+  }, [stopListening, stopAudioLevelMonitor]);
 
   const notifyParentOfCheck = useCallback(
     (result: SpeechCheckResult) => {
@@ -679,6 +729,7 @@ export function RecordingPanel({
     setMatchPercent(null);
     setFeedbackHint(null);
     setLastTranscript("");
+    maxAudioLevelRef.current = 0;
     whisperPendingRef.current = false;
     hasScoredCurrentRecordingRef.current = false;
     lastScoredTranscriptRef.current = "";
@@ -706,8 +757,15 @@ export function RecordingPanel({
       const shouldUseMediaRecorder = shouldUseMediaRecorderForDevice(deviceSpeechInfo);
       if (shouldUseMediaRecorder) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
           mediaStreamRef.current = stream;
+          startAudioLevelMonitor(stream);
           const recorder = new MediaRecorder(stream);
           mediaRecorderRef.current = recorder;
           recorder.ondataavailable = (event) => {
@@ -722,6 +780,7 @@ export function RecordingPanel({
             }
             const chunks = recordedChunksRef.current;
             recordedChunksRef.current = [];
+            stopAudioLevelMonitor();
             hasRecordedAudioBlobRef.current = chunks.length > 0;
             if (chunks.length > 0) {
               const mimeType = chooseRecordedAudioMimeType({
@@ -736,7 +795,16 @@ export function RecordingPanel({
                 }
                 return url;
               });
-              void transcribeRecordedAudio(blob, recordingId);
+              if (maxAudioLevelRef.current < SILENT_RECORDING_MAX_LEVEL) {
+                whisperPendingRef.current = false;
+                setIsTranscribing(false);
+                setNoSpeechMessage(null);
+                setAudioWithoutSttMessage(
+                  "Recording looks silent. Check the selected microphone/input level, then try again."
+                );
+              } else {
+                void transcribeRecordedAudio(blob, recordingId);
+              }
             } else {
               whisperPendingRef.current = false;
               finishWithTranscriptionFallback(recordingId);
@@ -750,6 +818,7 @@ export function RecordingPanel({
           recorder.start();
           setIsRecordingAudio(true);
         } catch {
+          stopAudioLevelMonitor();
           setMicError("Microphone access failed or recording is not supported.");
           if (mediaStreamRef.current) {
             mediaStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -781,6 +850,8 @@ export function RecordingPanel({
     transcribeRecordedAudio,
     finishWithTranscriptionFallback,
     browserStt,
+    startAudioLevelMonitor,
+    stopAudioLevelMonitor,
   ]);
 
   const onStop = useCallback(() => {
