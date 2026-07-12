@@ -4,6 +4,7 @@ export type SpeechRecordingDeviceInfo = {
   maxTouchPoints?: number;
   hasMediaRecording: boolean;
   hasBrowserSpeechRecognition?: boolean;
+  allowServerTranscription?: boolean;
 };
 
 export function isAppleMobileSpeechDevice(input: SpeechRecordingDeviceInfo): boolean {
@@ -26,10 +27,10 @@ export function shouldUseMediaRecorderForDevice(input: SpeechRecordingDeviceInfo
 
   // Chris does not want paid/cloud transcription right now. When the browser
   // can do speech recognition, use that direct/free path instead of recording
-  // audio for server transcription. This also avoids Chrome/Safari conflicts
-  // where MediaRecorder can grab the mic and leave browser recognition with no
-  // usable transcript.
-  if (input.hasBrowserSpeechRecognition) {
+  // audio for server transcription. In production, server transcription is not
+  // configured, so do not upload recorded audio unless the caller explicitly
+  // enables a local/free server transcription path.
+  if (input.hasBrowserSpeechRecognition || !input.allowServerTranscription) {
     return false;
   }
 

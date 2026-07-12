@@ -45,7 +45,15 @@ assert.equal(shouldUseMediaRecorderForDevice(iphoneSafari), false);
 assert.equal(shouldUseMediaRecorderForDevice(ipadDesktopMode), false);
 assert.equal(shouldUseMediaRecorderForDevice(desktopChrome), false);
 assert.equal(
-  shouldUseMediaRecorderForDevice({ ...iphoneSafari, hasBrowserSpeechRecognition: false }),
+  shouldUseMediaRecorderForDevice({ ...desktopChrome, hasBrowserSpeechRecognition: false }),
+  false
+);
+assert.equal(
+  shouldUseMediaRecorderForDevice({
+    ...desktopChrome,
+    hasBrowserSpeechRecognition: false,
+    allowServerTranscription: true,
+  }),
   true
 );
 assert.equal(shouldUseMediaRecorderForDevice({ ...desktopChrome, hasMediaRecording: false }), false);

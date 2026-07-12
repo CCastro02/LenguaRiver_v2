@@ -130,8 +130,11 @@ const AUDIO_RECORDED_BUT_NO_STT =
 const STT_NETWORK_FALLBACK_MSG =
   "Speech recognition unavailable. You can still continue by typing what you said.";
 
+const BROWSER_STT_NO_TEXT_MSG =
+  "Browser speech recognition did not hear any words. Check microphone permission/input, then try again or type it.";
+
 const TRANSCRIPTION_FAILED_MSG = "Transcription failed. You can type what you said.";
-const WEB_SPEECH_FINAL_GRACE_MS = 150;
+const WEB_SPEECH_FINAL_GRACE_MS = 1000;
 const WHISPER_LOADING_GRACE_MS = 250;
 const WHISPER_REFINEMENT_MIN_GAIN = 5;
 const SILENT_RECORDING_MAX_LEVEL = 2;
@@ -544,10 +547,24 @@ export function RecordingPanel({
       return;
     }
     setNoSpeechMessage(null);
-    setAudioWithoutSttMessage(
-      recognitionError === "network" ? STT_NETWORK_FALLBACK_MSG : TRANSCRIPTION_FAILED_MSG
-    );
-  }, [autoCheckOnStop, getLatestTranscript, notifyParentOfCheck, recognitionError, runCheck]);
+    const fallbackMessage = browserStt
+      ? recognitionError === "network"
+        ? STT_NETWORK_FALLBACK_MSG
+        : recognitionError
+          ? `Browser speech recognition error: ${recognitionError}. Try again or type what you said.`
+          : BROWSER_STT_NO_TEXT_MSG
+      : recognitionError === "network"
+        ? STT_NETWORK_FALLBACK_MSG
+        : TRANSCRIPTION_FAILED_MSG;
+    setAudioWithoutSttMessage(fallbackMessage);
+  }, [
+    autoCheckOnStop,
+    browserStt,
+    getLatestTranscript,
+    notifyParentOfCheck,
+    recognitionError,
+    runCheck,
+  ]);
 
   const scoreBrowserTranscriptIfAvailable = useCallback(
     (recordingId: number): boolean => {
@@ -753,6 +770,7 @@ export function RecordingPanel({
         maxTouchPoints: navigator.maxTouchPoints,
         hasMediaRecording: mediaRecordingAvailable,
         hasBrowserSpeechRecognition: browserStt,
+        allowServerTranscription: process.env.NODE_ENV !== "production",
       };
       const shouldUseMediaRecorder = shouldUseMediaRecorderForDevice(deviceSpeechInfo);
       if (shouldUseMediaRecorder) {
