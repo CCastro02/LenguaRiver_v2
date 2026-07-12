@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { chooseRecordedAudioMimeType } from "@/lib/recorded-audio";
+import { shouldStartBrowserSpeechRecognitionForDevice } from "@/lib/speech-recording-strategy";
 import { isBrowserSpeechRecognitionSupported, useSpeechRecognition } from "./useSpeechRecognition";
 import {
   classifyToken,
@@ -691,7 +692,9 @@ export function RecordingPanel({
     }
 
     try {
-      if (isMediaRecordingSupported()) {
+      const mediaRecordingAvailable = isMediaRecordingSupported();
+      let startedMediaRecorder = false;
+      if (mediaRecordingAvailable) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mediaStreamRef.current = stream;
@@ -735,6 +738,7 @@ export function RecordingPanel({
             mediaRecorderRef.current = null;
           };
           recorder.start();
+          startedMediaRecorder = true;
           setIsRecordingAudio(true);
         } catch {
           setMicError("Microphone access failed or recording is not supported.");
@@ -749,7 +753,16 @@ export function RecordingPanel({
         setIsRecordingAudio(true);
       }
 
-      startListening();
+      if (
+        shouldStartBrowserSpeechRecognitionForDevice({
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          maxTouchPoints: navigator.maxTouchPoints,
+          hasMediaRecording: startedMediaRecorder,
+        })
+      ) {
+        startListening();
+      }
     } finally {
       startingRef.current = false;
     }
@@ -774,6 +787,11 @@ export function RecordingPanel({
     whisperPendingRef.current = willTranscribeAudio;
     stopListening();
     if (recorder && recorder.state !== "inactive") {
+      try {
+        recorder.requestData();
+      } catch {
+        /* Some browsers do not support requestData in every recorder state. */
+      }
       try {
         recorder.stop();
       } catch {
